@@ -633,7 +633,9 @@ document.addEventListener('keydown', e => {
 if(grid){
   grid.addEventListener('click', e => {
     const card = e.target.closest('.card');
-    if(card && !e.target.closest('button, a')) openModal(card.dataset.id);
+    // клик по любому органу управления внутри карточки — это действие
+    // самого органа, а не «открыть карточку»
+    if(card && !e.target.closest('button, a, label, input, select, textarea')) openModal(card.dataset.id);
   });
 }
 
