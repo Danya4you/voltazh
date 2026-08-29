@@ -115,6 +115,11 @@ function fan(cx, cy, r, color, cls){
 
 /* Рассрочка 0-0-12: без первого взноса и переплаты, поэтому это
    просто цена, делённая на 12 и округлённая вверх до сотни. */
+/* Доставка: бесплатно от порога, иначе фиксированная. Одно место на весь сайт. */
+const FREE_FROM = 150000;
+const DELIVERY  = 2900;
+const deliveryFor = sum => sum >= FREE_FROM ? 0 : DELIVERY;
+
 const INSTAL_MONTHS = 12;
 const perMonth = price => Math.ceil(price / INSTAL_MONTHS / 100) * 100;
 
@@ -242,7 +247,6 @@ const scrim  = document.getElementById('scrim');
 const cartN  = document.getElementById('cartN');
 const cartBody = document.getElementById('cartBody');
 const cartFoot = document.getElementById('cartFoot');
-let orderDone = false;
 
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(cart)); } catch(e){} };
 const count = () => Object.values(cart.items).reduce((a, b) => a + b, 0);
@@ -304,7 +308,6 @@ function renderCart(){
     cartFoot.innerHTML = '';   // чтобы старый итог не всплыл при повторном открытии
     return;
   }
-  orderDone = false;
 
   cartBody.innerHTML = Object.entries(cart.items).map(([id, q]) => {
     const b = item(id);
@@ -327,32 +330,20 @@ function renderCart(){
     </div>`;
   }).join('');
 
+  // Корзина показывает состав и итог — и всё. Анкета покупателя живёт
+  // на отдельной странице: в узкой панели ей тесно, а заполнять её
+  // на широком экране удобнее.
   const sum = total();
-  const delivery = sum >= 150000 ? 0 : 2900;
+  const delivery = deliveryFor(sum);
+  const toFree = FREE_FROM - sum;
   cartFoot.hidden = false;
   cartFoot.innerHTML = `
     <div class="sum"><span>Сборки (${n})</span><span>${rub(sum)}</span></div>
     <div class="sum"><span>Доставка</span><span>${delivery ? rub(delivery) : 'бесплатно'}</span></div>
     <div class="sum sum--total"><span>Итого</span><b>${rub(sum + delivery)}</b></div>
-    <form class="form" id="orderForm" novalidate>
-      <div class="field"><label for="fName">Имя</label><input id="fName" name="name" autocomplete="name" placeholder="Как к вам обращаться"><span class="err">Укажите имя</span></div>
-      <div class="field"><label for="fPhone">Телефон</label><input id="fPhone" name="phone" inputmode="tel" autocomplete="tel" placeholder="+7 (___) ___-__-__"><span class="err">Нужно не меньше 10 цифр</span></div>
-      <div class="field"><label for="fCity">Город доставки</label><input id="fCity" name="city" autocomplete="address-level2" placeholder="Например, Томск"><span class="err">Укажите город</span></div>
-      <div class="field"><label for="fPay">Оплата</label>
-        <select id="fPay" name="pay">
-          <option>Картой онлайн</option><option>Рассрочка 0-0-12</option>
-          <option>Наличными при получении</option><option>Счёт для юрлица</option>
-        </select>
-      </div>
-      <div class="field field--agree">
-        <label class="agree">
-          <input type="checkbox" id="fAgree">
-          <span>Согласен на обработку персональных данных и с <a href="policy.html" target="_blank" rel="noopener">политикой конфиденциальности</a></span>
-        </label>
-        <span class="err">Без согласия мы не имеем права принять заказ</span>
-      </div>
-      <button class="btn btn--wide" type="submit">Оформить заказ</button>
-    </form>`;
+    ${toFree > 0 ? `<p class="tofree">Ещё <b>${rub(toFree)}</b> — и доставка бесплатно</p>` : ''}
+    <a class="btn btn--wide" href="checkout.html">Перейти к оформлению</a>
+    <button class="btn btn--ghost btn--wide btn--sm" data-cart-continue>Продолжить покупки</button>`;
 }
 
 /* ---------- доступность всплывающих слоёв ----------
@@ -397,7 +388,7 @@ function closeCart(){
     scrim.classList.remove('on');
     document.body.style.overflow = '';
   }
-  if(orderDone){ orderDone = false; renderCart(); }
+
   restoreFocus();
 }
 
@@ -406,6 +397,7 @@ document.getElementById('cartClose').addEventListener('click', closeCart);
 scrim.addEventListener('click', () => { closeCart(); closeModal(); });
 
 document.addEventListener('click', e => {
+  if(e.target.closest('[data-cart-continue]')){ closeCart(); return; }
   if(e.target.closest('[data-go-catalog]')){
     closeCart();
     // на главной и в каталоге сборки рядом, с остальных страниц уводим в каталог
@@ -514,49 +506,6 @@ document.addEventListener('submit', async e => {
   </div>`;
 });
 
-/* оформление заказа */
-document.addEventListener('submit', async e => {
-  if(e.target.id !== 'orderForm') return;
-  e.preventDefault();
-  const f = e.target;
-  const ok = validate(f, [
-    ['fName',  v => v.trim().length >= 2],
-    ['fPhone', v => (v.match(/\d/g) || []).length >= 10],
-    ['fCity',  v => v.trim().length >= 2],
-    ['fAgree', v => v === true]
-  ]);
-  if(!ok) return;
-
-  const btn = f.querySelector('button[type=submit]');
-  btn.disabled = true; btn.textContent = 'Отправляем…';
-  const sent = await send('заказ', {
-    name:  f.querySelector('#fName').value.trim(),
-    phone: f.querySelector('#fPhone').value.trim(),
-    city:  f.querySelector('#fCity').value.trim(),
-    pay:   f.querySelector('#fPay').value,
-    order: Object.entries(cart.items)
-             .map(([id, q]) => `${(item(id) || {}).name || id} ×${q}`).join(', '),
-    total: total()
-  });
-  if(!sent){
-    btn.disabled = false; btn.textContent = 'Оформить заказ';
-    sendFailed(f); return;
-  }
-
-  const name = f.querySelector('#fName').value.trim().split(' ')[0];
-  const sum = total();
-  orderDone = true;
-  cartBody.innerHTML = `<div class="done">
-    <div class="done__i">✓</div>
-    <h3>Заказ принят</h3>
-    <p>${name}, спасибо! Заявка на ${rub(sum + (sum >= 150000 ? 0 : 2900))} у мастера.
-    Позвоним в течение 20 минут, чтобы согласовать конфигурацию до оплаты.</p>
-    <p style="font-family:var(--f-mono); font-size:12px; letter-spacing:.06em; color:var(--ink-3)">Номер заявки VLTZ-${Math.floor(Math.random() * 9000 + 1000)}</p>
-  </div>`;
-  cartFoot.hidden = true;
-  cart = { items: {}, customs: {} }; save();
-  cartN.textContent = '0'; cartN.setAttribute('data-zero', '');
-});
 
 renderCart();
 
@@ -1045,7 +994,17 @@ if(crumbNav){
 
 blocks.forEach(jsonLd);
 
-/* то, что нужно конфигуратору на отдельной странице */
-window.VOLTAZH.api = { rub, pcSVG, addCustom, openCart, validate };
+/* то, что нужно конфигуратору и странице оформления */
+window.VOLTAZH.api = {
+  rub, pcSVG, customShape, addCustom, openCart, validate, perMonth,
+  send, sendFailed,
+  FREE_FROM, DELIVERY, deliveryFor,
+  cartCount: count,
+  cartTotal: total,
+  cartLines: () => Object.entries(cart.items)
+    .map(([id, qty]) => ({ id, qty, build: item(id) }))
+    .filter(l => l.build),
+  clearCart: () => { cart = { items: {}, customs: {} }; save(); renderCart(); }
+};
 
 })();
