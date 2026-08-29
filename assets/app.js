@@ -214,7 +214,9 @@ function applyFilters(){
       '<p class="empty">В этой категории пока нет сборок. Соберём под заказ — позвоните нам.</p>');
   } else if(shown > 0 && empty){ empty.remove(); }
 
-  measure();
+  // фильтр меняет высоту страницы, но замер откладываем: иначе чтение
+  // идёт сразу после записи классов и форсирует пересчёт раскладки
+  requestAnimationFrame(measure);
   if(found){
     const total = grid.querySelectorAll('.card').length;
     found.innerHTML = shown === total
@@ -642,8 +644,11 @@ function measure(){
   docH = document.body.scrollHeight - innerHeight;
 }
 
+/* Рейка появляется только от 1320px. На узких экранах её незачем
+   раскладывать: чтение offsetTop у секций форсирует пересчёт раскладки
+   ради элемента, которого не видно. */
 function layoutTicks(){
-  if(!rail) return;
+  if(!rail || innerWidth < 1320) return;
   const ticks = [...rail.querySelectorAll('.rail__tick')];
   // сначала все чтения, потом все записи: если чередовать их в цикле,
   // браузер пересчитывает раскладку на каждой итерации
@@ -673,7 +678,8 @@ addEventListener('scroll', () => {
   if(!ticking){ ticking = true; requestAnimationFrame(onScroll); }
 }, { passive: true });
 addEventListener("resize", () => { measure(); layoutTicks(); onScroll(); });
-measure(); layoutTicks(); onScroll();
+/* первый замер — после первой отрисовки, чтобы не задерживать её */
+requestAnimationFrame(() => { measure(); layoutTicks(); onScroll(); });
 
 /* ============================================================
    ПЛАВНАЯ ПРОКРУТКА
