@@ -145,7 +145,7 @@ assets/config.js    конфигуратор
 assets/build.js     страница отдельной сборки
 assets/checkout.js  оформление заказа
 
-favicon.svg · og-image.svg · robots.txt · sitemap.xml · netlify.toml
+favicon.svg · og-image.png · robots.txt · sitemap.xml · netlify.toml
 build.sh            сборка однофайловых версий в dist/
 deploy-setup.sh     подстановка адреса сайта перед публикацией
 roadmap.html        план дальнейших работ
@@ -190,9 +190,6 @@ bash deploy-setup.sh <логин-на-github> <имя-репозитория>
 bash deploy-setup.sh --url https://свой-домен.ру
 ```
 
-Осталось сделать вручную: `og-image.png` 1200×630 из `og-image.svg` —
-телеграм и VK не показывают SVG в превью ссылки. В Figma: Place image →
-Export → PNG 1×.
 
 ## Куда подключить приём заявок
 
