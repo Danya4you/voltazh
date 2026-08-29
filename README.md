@@ -4,7 +4,7 @@
 и проверкой совместимости комплектующих. Без фреймворков и сборщиков —
 чистый HTML, CSS и ванильный JavaScript.
 
-**Живая версия:** _добавьте ссылку после публикации (см. «Как выложить»)._
+**Живая версия:** https://danya4you.github.io/voltazh/
 
 ---
 
@@ -32,6 +32,7 @@ Tilda пускает произвольный код только через б�
 | `catalog.html` | Все шесть сборок, фильтр по разрешению, ползунок бюджета, сортировка, сравнение |
 | `build.html?id=` | Карточка сборки: полная спецификация, кадры в играх, микроразметка товара |
 | `configurator.html` | Сборка по деталям с проверкой совместимости на каждом шаге |
+| `checkout.html` | Оформление: контакты, доставка, оплата и состав заказа рядом |
 | `policy.html` | Обработка данных и cookie |
 | `404.html` | «Обрыв цепи» |
 
@@ -142,9 +143,11 @@ assets/data.js      ДАННЫЕ: сборки, комплектующие, пр
 assets/app.js       общее: корзина, модалка, анимации, формы, микроразметка
 assets/config.js    конфигуратор
 assets/build.js     страница отдельной сборки
+assets/checkout.js  оформление заказа
 
 favicon.svg · og-image.svg · robots.txt · sitemap.xml · netlify.toml
 build.sh            сборка однофайловых версий в dist/
+deploy-setup.sh     подстановка адреса сайта перед публикацией
 roadmap.html        план дальнейших работ
 ```
 
@@ -175,20 +178,21 @@ bash build.sh
 туда папку проекта. Ссылка появится сразу. `netlify.toml` уже настроен:
 кеш для ассетов и страница 404.
 
-**GitHub Pages** — если хотите, чтобы рядом была история коммитов:
-создать репозиторий, `git remote add origin …`, `git push -u origin main`,
-затем Settings → Pages → Deploy from branch → `main` / `root`.
-Файл `.nojekyll` уже лежит.
+**GitHub Pages** — текущий вариант. Адрес сайта уже подставлен в canonical,
+Open Graph, `robots.txt`, `sitemap.xml` и константу `SITE` в скриптах.
+Файл `.nojekyll` на месте, иначе Pages проглотит папку `assets`.
 
-После публикации нужно **заменить домен** — везде стоит заглушка
-`https://voltazh.ru` (canonical, Open Graph, `robots.txt`, `sitemap.xml`):
+Если адрес изменится — свой домен или другое имя репозитория, — не правьте
+девять файлов руками:
 
 ```bash
-grep -rl 'voltazh\.ru' *.html *.txt *.xml | xargs sed -i 's|https://voltazh\.ru|https://ваш-адрес|g'
+bash deploy-setup.sh <логин-на-github> <имя-репозитория>
+bash deploy-setup.sh --url https://свой-домен.ру
 ```
 
-И получить `og-image.png` 1200×630 из `og-image.svg` — телеграм и VK
-не показывают SVG в превью ссылки. В Figma: Place image → Export → PNG 1×.
+Осталось сделать вручную: `og-image.png` 1200×630 из `og-image.svg` —
+телеграм и VK не показывают SVG в превью ссылки. В Figma: Place image →
+Export → PNG 1×.
 
 ## Куда подключить приём заявок
 
