@@ -14,6 +14,9 @@ const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 /* единый формат цены: неразрывные пробелы и рубль */
 const rub = n => n.toLocaleString('ru-RU') + ' ₽';
 
+/* высота прокручиваемой части документа; обновляется в measure() */
+let docH = 0;
+
 /* Всё, что ввёл человек, перед вставкой в разметку экранируем.
    Данные каталога наши и безопасны, а имя из формы — нет: без этого
    строка вида <img onerror=…> выполнилась бы как код. */
@@ -211,6 +214,7 @@ function applyFilters(){
       '<p class="empty">В этой категории пока нет сборок. Соберём под заказ — позвоните нам.</p>');
   } else if(shown > 0 && empty){ empty.remove(); }
 
+  measure();
   if(found){
     const total = grid.querySelectorAll('.card').length;
     found.innerHTML = shown === total
@@ -382,14 +386,16 @@ function restoreFocus(){
 function openCart(){
   if(!drawer.classList.contains('on') && !modal.classList.contains('on')) lastFocused = document.activeElement;
   drawer.classList.add('on'); scrim.classList.add('on');
+  drawer.inert = false;
   drawer.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
   const f = drawer.querySelector('input, button');
   if(f) f.focus({ preventScroll: true });
 }
 function closeCart(){
-  drawer.classList.remove('on');
-  drawer.setAttribute('aria-hidden', 'true');
+  drawer.classList.remove("on");
+  drawer.inert = true;
+  drawer.setAttribute("aria-hidden", "true");
   // подложка и блокировка скролла нужны, пока открыта модалка товара
   if(!modal.classList.contains('on')){
     scrim.classList.remove('on');
@@ -514,6 +520,11 @@ document.addEventListener('submit', async e => {
 });
 
 
+/* При загрузке корзина и карточка закрыты. Одного aria-hidden мало:
+   их кнопки остаются в порядке обхода по Tab и уводят фокус за экран.
+   inert выключает и фокус, и объявление скринридером. */
+drawer.inert = true;
+
 renderCart();
 
 /* ============================================================
@@ -521,6 +532,7 @@ renderCart();
    ============================================================ */
 const modal = document.getElementById('modal');
 const modalGrid = document.getElementById('modalGrid');
+modal.inert = true;
 
 function openModal(id){
   const b = BUILDS.find(x => x.id === id);
@@ -566,6 +578,7 @@ function openCompare(){
 function showModal(){
   if(!modal.classList.contains('on') && !drawer.classList.contains('on')) lastFocused = document.activeElement;
   modal.classList.add('on'); scrim.classList.add('on');
+  modal.inert = false;
   modal.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
   modal.scrollTop = 0;
@@ -573,8 +586,9 @@ function showModal(){
 }
 function closeModal(){
   if(!modal.classList.contains('on')) return;
-  modal.classList.remove('on');
-  modal.setAttribute('aria-hidden', 'true');
+  modal.classList.remove("on");
+  modal.inert = true;
+  modal.setAttribute("aria-hidden", "true");
   if(!drawer.classList.contains('on')){
     scrim.classList.remove('on');
     document.body.style.overflow = '';
@@ -621,20 +635,29 @@ if(rail){
     track.appendChild(el);
   });
 }
+/* Высоту документа меряем отдельно и запоминаем: читать scrollHeight
+   на каждом кадре прокрутки — значит каждый раз заставлять браузер
+   пересчитывать раскладку. */
+function measure(){
+  docH = document.body.scrollHeight - innerHeight;
+}
+
 function layoutTicks(){
   if(!rail) return;
-  const docH = document.body.scrollHeight - innerHeight;
-  rail.querySelectorAll('.rail__tick').forEach(t => {
+  const ticks = [...rail.querySelectorAll('.rail__tick')];
+  // сначала все чтения, потом все записи: если чередовать их в цикле,
+  // браузер пересчитывает раскладку на каждой итерации
+  const tops = ticks.map(t => {
     const sec = document.querySelector(t.dataset.sel);
-    if(!sec) return;
-    const p = Math.min(1, Math.max(0, sec.offsetTop / (docH || 1)));
-    t.style.top = (p * 100) + '%';
+    return sec ? Math.min(1, Math.max(0, sec.offsetTop / (docH || 1))) : null;
+  });
+  ticks.forEach((t, i) => {
+    if(tops[i] !== null) t.style.top = (tops[i] * 100) + '%';
   });
 }
 
 let ticking = false;
 function onScroll(){
-  const docH = document.body.scrollHeight - innerHeight;
   const p = docH > 0 ? Math.min(1, Math.max(0, scrollY / docH)) : 0;
   root.style.setProperty('--sp', p.toFixed(4));
   top.classList.toggle('stuck', scrollY > 12);
@@ -649,8 +672,8 @@ function onScroll(){
 addEventListener('scroll', () => {
   if(!ticking){ ticking = true; requestAnimationFrame(onScroll); }
 }, { passive: true });
-addEventListener('resize', () => { layoutTicks(); onScroll(); });
-layoutTicks(); onScroll();
+addEventListener("resize", () => { measure(); layoutTicks(); onScroll(); });
+measure(); layoutTicks(); onScroll();
 
 /* ============================================================
    ПЛАВНАЯ ПРОКРУТКА
@@ -786,6 +809,7 @@ let cmp = [];
 function renderCmpBar(){
   if(!cmpBar) return;
   cmpBar.classList.toggle('is-on', cmp.length > 0);
+  cmpBar.inert = cmp.length === 0;
   if(!cmp.length) return;
   const chips = cmp.map(id => {
     const b = BUILDS.find(x => x.id === id);

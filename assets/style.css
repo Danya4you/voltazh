@@ -68,7 +68,7 @@ body{
     radial-gradient(38vw 38vw at calc(88% - var(--sp)*62%) calc(78% - var(--sp)*30%),
       rgba(143,227,255, calc(.03 + var(--sp)*.09)), transparent 60%);
   filter:blur(6px);
-  transition:background .25s linear;
+  will-change:background;
 }
 .bg__grid{
   position:absolute; inset:0;
@@ -647,7 +647,7 @@ input[type=range]::-moz-range-thumb{
 .foot__grid{display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:34px; margin-bottom:44px}
 @media (max-width:900px){ .foot__grid{grid-template-columns:1fr 1fr} }
 @media (max-width:520px){ .foot__grid{grid-template-columns:1fr} }
-.foot h4{font-family:var(--f-disp); font-size:13px; font-weight:600; letter-spacing:-.02em; color:var(--ink); margin-bottom:16px}
+.foot h3{font-family:var(--f-disp); font-size:13px; font-weight:600; letter-spacing:-.02em; color:var(--ink); margin-bottom:16px}
 .foot ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; font-size:14.5px}
 .foot a{color:var(--ink-2); text-decoration:none; transition:color .2s}
 .foot a:hover{color:var(--volt)}
