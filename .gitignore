@@ -5,3 +5,7 @@ dist/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# временные файлы Office и OneDrive
+~$*
+*.tmp
