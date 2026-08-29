@@ -918,7 +918,7 @@ if(cookieBox){
    данных каталога, вопросы — из блока FAQ, крошки — из навигации.
    Так разметка не может разойтись с содержимым.
    ============================================================ */
-const SITE = 'https://voltazh.ru';
+const SITE = 'https://danya4you.github.io/voltazh';
 function jsonLd(data){
   const tag = document.createElement('script');
   tag.type = 'application/ld+json';

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://voltazh.ru/sitemap.xml
+Sitemap: https://danya4you.github.io/voltazh/sitemap.xml

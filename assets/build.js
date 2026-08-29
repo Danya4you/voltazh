@@ -13,7 +13,7 @@ if(!box) return;
 
 const { BUILDS, api } = window.VOLTAZH;
 const { rub, pcSVG } = api;
-const SITE = 'https://voltazh.ru';
+const SITE = 'https://danya4you.github.io/voltazh';
 
 const id = new URLSearchParams(location.search).get('id');
 const b = BUILDS.find(x => x.id === id);

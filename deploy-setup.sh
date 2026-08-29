@@ -45,8 +45,13 @@ bash build.sh >/dev/null
 echo
 echo "Готово. Дальше:"
 echo "  git add -A && git commit -m 'Адрес сайта: $URL'"
-echo "  git remote add origin https://github.com/$1/$2.git"
-echo "  git push -u origin main"
+if [ "$1" != "--url" ]; then
+  echo "  git remote add origin https://github.com/$1/$2.git"
+  echo "  git push -u origin main"
+else
+  echo "  git remote add origin https://github.com/<логин>/<репозиторий>.git"
+  echo "  git push -u origin main"
+fi
 echo
 echo "Затем в репозитории: Settings → Pages → Source: Deploy from a branch"
 echo "                     Branch: main / (root) → Save"
