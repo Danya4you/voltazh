@@ -37,15 +37,20 @@ function renderSummary(){
   sumBox.innerHTML = `
     <h2 class="co__sumh">Ваш заказ</h2>
     <div class="co__lines">
-      ${lines.map(({ build: b, qty }) => `
+      ${lines.map(({ id, build: b, qty }) => `
         <div class="co__line">
           <div class="line__art">${b.style ? pcSVG(b, 'mini') : pcSVG(customShape(b), 'mini')}</div>
           <div class="line__mid">
             <div class="line__n">${b.name}</div>
             <div class="line__v">${b.volt ? `${b.volt} V · VLTZ-${b.volt}` : b.specs}</div>
-            <div class="co__qty">${qty} шт. × ${rub(b.price)}</div>
+            <div class="qty">
+              <button data-dec="${id}" aria-label="Убрать одну сборку ${b.name}">−</button>
+              <span>${qty}</span>
+              <button data-inc="${id}" aria-label="Добавить сборку ${b.name}">+</button>
+              <button class="rm" data-rm="${id}" aria-label="Удалить ${b.name} из заказа">удалить</button>
+            </div>
           </div>
-          <div class="co__lp">${rub(b.price * qty)}</div>
+          <div class="co__lp">${rub(b.price * qty)}${qty > 1 ? `<small>по ${rub(b.price)}</small>` : ''}</div>
         </div>`).join('')}
     </div>
     <div class="sum"><span>Сборки (${api.cartCount()})</span><span>${rub(sum)}</span></div>
@@ -109,6 +114,13 @@ form.addEventListener('submit', async e => {
     </div>`;
 
   api.clearCart();
+});
+
+/* Кнопки количества и удаления те же, что в панели корзины: сам состав
+   меняет app.js, здесь остаётся только перерисовать итог. Его обработчик
+   зарегистрирован раньше нашего, поэтому к этому моменту корзина уже новая. */
+document.addEventListener('click', e => {
+  if(e.target.closest('[data-dec], [data-inc], [data-rm]')) renderSummary();
 });
 
 renderSummary();

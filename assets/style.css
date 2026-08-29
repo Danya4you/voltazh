@@ -1194,7 +1194,8 @@ a.card__name:hover{color:var(--volt)}
 .co__line{display:flex; gap:13px; align-items:flex-start}
 .co__line .line__art{width:48px; height:58px}
 .co__line .line__art svg{height:46px}
-.co__qty{font-family:var(--f-mono); font-size:11.5px; color:var(--ink-3); margin-top:6px; font-variant-numeric:tabular-nums}
+.co__line .qty{margin-top:9px}
+.co__lp small{display:block; font-family:var(--f-body); font-size:11.5px; color:var(--ink-3); margin-top:3px; font-weight:400}
 .co__lp{
   font-family:var(--f-mono); font-size:13.5px; margin-left:auto; white-space:nowrap;
   font-variant-numeric:tabular-nums;
