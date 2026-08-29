@@ -11,7 +11,7 @@ const form = document.getElementById('checkout');
 if(!form) return;
 
 const api = window.VOLTAZH.api;
-const { rub, pcSVG, customShape, validate, send, sendFailed, deliveryFor, FREE_FROM } = api;
+const { rub, esc, pcSVG, customShape, validate, send, sendFailed, deliveryFor, FREE_FROM } = api;
 
 const sumBox   = document.getElementById('coSum');
 const emptyBox = document.getElementById('coEmpty');
@@ -95,7 +95,7 @@ form.addEventListener('submit', async e => {
     sendFailed(form); return;
   }
 
-  const name = form.querySelector('#coName').value.trim().split(' ')[0];
+  const name = esc(form.querySelector('#coName').value.trim().split(' ')[0]);
   const num = 'VLTZ-' + Math.floor(Math.random() * 9000 + 1000);
 
   document.getElementById('coWrap').innerHTML = `

@@ -14,6 +14,13 @@ const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 /* единый формат цены: неразрывные пробелы и рубль */
 const rub = n => n.toLocaleString('ru-RU') + ' ₽';
 
+/* Всё, что ввёл человек, перед вставкой в разметку экранируем.
+   Данные каталога наши и безопасны, а имя из формы — нет: без этого
+   строка вида <img onerror=…> выполнилась бы как код. */
+const esc = s => String(s).replace(/[&<>"']/g, c => (
+  { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+));
+
 /* ============================================================
    ГЕНЕРАТОР SVG-КОРПУСА
    Один параметрический рисунок на все сборки: пропорции,
@@ -497,7 +504,7 @@ document.addEventListener('submit', async e => {
     sendFailed(f); return;
   }
 
-  const name = f.querySelector('#aName').value.trim().split(' ')[0];
+  const name = esc(f.querySelector('#aName').value.trim().split(' ')[0]);
   f.innerHTML = `<div class="done">
     <div class="done__i">✓</div>
     <h3>Вопрос отправлен</h3>
@@ -996,7 +1003,7 @@ blocks.forEach(jsonLd);
 
 /* то, что нужно конфигуратору и странице оформления */
 window.VOLTAZH.api = {
-  rub, pcSVG, customShape, addCustom, openCart, validate, perMonth,
+  rub, esc, pcSVG, customShape, addCustom, openCart, validate, perMonth,
   send, sendFailed,
   FREE_FROM, DELIVERY, deliveryFor,
   cartCount: count,
