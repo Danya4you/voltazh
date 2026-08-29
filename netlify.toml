@@ -1,0 +1,14 @@
+# Деплой на Netlify: перетащите папку на app.netlify.com/drop
+# или подключите репозиторий — сборка не нужна, это статика.
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[redirects]]
+  from = "/*"
+  to = "/404.html"
+  status = 404

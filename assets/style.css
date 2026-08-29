@@ -1,0 +1,1155 @@
+/* ============================================================
+   ВОЛЬТАЖ — магазин игровых ПК
+   Тёмная одностилевая тема (осознанный выбор: витрина мастерской).
+   Все цвета заданы явно, страница не зависит от фона хоста.
+   ============================================================ */
+
+:root{
+  /* грунт — тёплый графит, не синий */
+  --ground:      #12100E;
+  --ground-2:    #1A1714;
+  --ground-3:    #221E19;
+  --line:        #2F2921;
+  --line-soft:   #241F1A;
+
+  --ink:         #F3EEE6;
+  --ink-2:       #C4B9AB;
+  --ink-3:       #8A7F72;
+
+  /* акцент — медь под напряжением */
+  --volt:        #FF9A1F;
+  --volt-deep:   #C96A00;
+  --volt-soft:   rgba(255,154,31,.14);
+
+  /* холодная дуга — только для «электрических» моментов */
+  --arc:         #8FE3FF;
+
+  --ok:          #6FD68F;
+  --warn:        #FFC64D;
+
+  --r-sm: 3px;
+  --r-md: 6px;
+  --r-lg: 10px;
+
+  --shell: 1240px;
+  --rail: 110px;
+
+  /* Unbounded — то, что запоминается. Onest — то, что читается.
+     Mono — только настоящие данные. Caveat — рука человека. */
+  --f-disp: 'Unbounded','Onest','Segoe UI',system-ui,sans-serif;
+  --f-body: 'Onest','Segoe UI',system-ui,sans-serif;
+  --f-mono: 'JetBrains Mono','Cascadia Mono',ui-monospace,monospace;
+  --f-hand: 'Caveat','Segoe Script',cursive;
+
+  --sp: 0; /* прогресс скролла 0..1, пишется из JS */
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:var(--f-body);
+  font-size:16px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+
+/* ---------- фон, живущий по скроллу ---------- */
+.bg{position:fixed; inset:0; z-index:0; pointer-events:none}
+.bg__glow{
+  position:absolute; inset:-20%;
+  background:
+    radial-gradient(46vw 46vw at calc(18% + var(--sp)*58%) calc(14% + var(--sp)*24%),
+      rgba(255,154,31, calc(.05 + var(--sp)*.20)), transparent 62%),
+    radial-gradient(38vw 38vw at calc(88% - var(--sp)*62%) calc(78% - var(--sp)*30%),
+      rgba(143,227,255, calc(.03 + var(--sp)*.09)), transparent 60%);
+  filter:blur(6px);
+  transition:background .25s linear;
+}
+.bg__grid{
+  position:absolute; inset:0;
+  background-image:
+    linear-gradient(var(--line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+  background-size:76px 76px;
+  opacity:calc(.5 - var(--sp)*.22);
+  mask-image:radial-gradient(120% 90% at 50% 20%, #000 30%, transparent 85%);
+}
+.bg__vig{
+  position:absolute; inset:0;
+  background:radial-gradient(120% 80% at 50% 0%, transparent 40%, rgba(0,0,0,.55) 100%);
+}
+.cursor-glow{
+  position:fixed; z-index:1; width:520px; height:520px; margin:-260px 0 0 -260px;
+  border-radius:50%; pointer-events:none; opacity:0; transition:opacity .5s ease;
+  background:radial-gradient(circle, rgba(255,154,31,.10), transparent 66%);
+}
+
+/* ---------- вольтметровая рейка ----------
+   Рейка занимает ровно левое поле страницы: её ширина считается
+   из фактического отступа .shell, поэтому она физически не может
+   наехать на контент. Чем уже экран — тем меньше она показывает. */
+.rail{
+  position:fixed; left:14px; top:0; bottom:0; z-index:5;
+  width:calc((100vw - min(100vw - 40px, var(--shell))) / 2 - 26px);
+  display:none; pointer-events:none;
+  font-family:var(--f-mono);
+}
+.rail__track{
+  position:absolute; left:0; top:15vh; bottom:24vh; width:2px;
+  background:var(--line);
+}
+.rail__fill{
+  position:absolute; left:0; top:0; width:100%;
+  height:calc(var(--sp)*100%);
+  background:linear-gradient(180deg,var(--volt-deep),var(--volt));
+  box-shadow:0 0 14px rgba(255,154,31,.65);
+}
+.rail__head{
+  position:absolute; left:-4px; top:calc(var(--sp)*100%); width:10px; height:10px;
+  margin-top:-5px; border-radius:50%;
+  background:var(--volt); box-shadow:0 0 12px 2px rgba(255,154,31,.8);
+}
+.rail__tick{position:absolute; left:0; display:flex; align-items:center; gap:9px; transform:translateY(-50%)}
+.rail__tick i{display:block; width:13px; height:1px; background:var(--line); flex:none}
+.rail__tick span{font-size:10px; letter-spacing:.1em; color:var(--ink-3); white-space:nowrap}
+.rail__tick.on i{background:var(--volt); width:20px}
+.rail__tick.on span{color:var(--volt)}
+.rail__read{
+  position:absolute; left:0; bottom:11vh; width:100%;
+  font-family:var(--f-disp); font-size:clamp(15px,1.15vw,21px); font-weight:800; letter-spacing:-.035em;
+  line-height:1.1; white-space:nowrap; font-variant-numeric:tabular-nums;
+  color:var(--ink-2);
+}
+.rail__read small{
+  display:block; margin-bottom:5px;
+  font-family:var(--f-mono); font-size:9px; letter-spacing:.2em;
+  color:var(--ink-3); font-weight:400;
+}
+
+/* от 1320px в поле помещается сама шкала с делениями */
+@media (min-width:1320px){
+  .rail{display:block}
+  .rail__tick span, .rail__read{display:none}
+}
+/* от 1440px — уже и подписи делений, и показание вольтметра */
+@media (min-width:1440px){
+  .rail__tick span{display:block}
+  .rail__read{display:block}
+}
+
+/* ---------- каркас ---------- */
+.shell{width:min(100% - 40px, var(--shell)); margin-inline:auto; position:relative; z-index:2}
+section{position:relative; z-index:2}
+.band{padding:clamp(64px,9vw,120px) 0; border-top:1px solid var(--line-soft)}
+.band--flush{border-top:0}
+
+/* ---------- типографика ---------- */
+h1,h2,h3,h4{
+  font-family:var(--f-disp); font-weight:800; margin:0;
+  line-height:1.04; text-wrap:balance; letter-spacing:-.03em;
+}
+h2{font-size:clamp(27px,3.7vw,45px)}
+h3{font-size:clamp(19px,2vw,25px); font-weight:700; letter-spacing:-.022em}
+p{margin:0}
+a{color:inherit}
+
+/* надзаголовок — единственное место, где остался «приборный» трекинг */
+.eyebrow{
+  font-family:var(--f-mono); font-size:11px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--volt); display:flex; align-items:center; gap:11px; margin-bottom:18px;
+}
+.eyebrow::before{content:''; width:26px; height:1px; background:var(--volt); flex:none}
+.lead{color:var(--ink-2); font-size:clamp(16px,1.3vw,17.5px); max-width:60ch; margin-top:18px; line-height:1.62}
+
+/* рукописный акцент */
+.hand{font-family:var(--f-hand); font-weight:600; letter-spacing:0; line-height:1.25}
+.head{margin-bottom:clamp(36px,4.6vw,60px)}
+.head--split{display:flex; gap:36px; align-items:flex-end; justify-content:space-between; flex-wrap:wrap}
+
+/* ---------- кнопки ---------- */
+.btn{
+  --bg:var(--volt); --fg:#160F04;
+  appearance:none; border:0; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  padding:15px 26px; background:var(--bg); color:var(--fg);
+  font-family:var(--f-body); font-size:15.5px; font-weight:600; letter-spacing:-.005em;
+  border-radius:var(--r-sm); text-decoration:none; position:relative; overflow:hidden;
+  transition:transform .18s ease, box-shadow .25s ease, background .2s ease;
+}
+.btn:hover{transform:translateY(-2px); box-shadow:0 10px 30px -8px rgba(255,154,31,.55)}
+.btn:active{transform:translateY(0)}
+.btn--ghost{--bg:transparent; --fg:var(--ink); border:1px solid var(--line); }
+.btn--ghost:hover{border-color:var(--volt); color:var(--volt); box-shadow:none}
+.btn--wide{width:100%}
+.btn--sm{padding:11px 17px; font-size:14px}
+:focus-visible{outline:2px solid var(--arc); outline-offset:3px; border-radius:2px}
+
+/* ---------- шапка ---------- */
+.top{
+  position:sticky; top:0; z-index:60;
+  background:rgba(18,16,14,.72); backdrop-filter:blur(14px);
+  border-bottom:1px solid transparent; transition:border-color .3s, background .3s;
+}
+.top.stuck{border-bottom-color:var(--line); background:rgba(18,16,14,.92)}
+.top__in{display:flex; align-items:center; gap:28px; height:70px}
+.logo{display:flex; align-items:center; gap:11px; text-decoration:none; margin-right:auto}
+.logo__mark{width:30px; height:30px; flex:none}
+.logo__txt{font-family:var(--f-disp); font-size:19px; font-weight:800; letter-spacing:.015em; text-transform:uppercase}
+.logo__txt b{color:var(--volt); font-weight:800}
+.nav{display:flex; gap:26px}
+.nav a{
+  font-family:var(--f-body); font-size:14.5px; font-weight:500; letter-spacing:-.005em;
+  color:var(--ink-2); text-decoration:none; padding:6px 0; position:relative;
+}
+.nav a::after{content:''; position:absolute; left:0; right:100%; bottom:0; height:1px; background:var(--volt); transition:right .28s ease}
+.nav a:hover{color:var(--ink)} .nav a:hover::after{right:0}
+.cart-btn{
+  position:relative; display:inline-flex; align-items:center; gap:9px;
+  background:var(--ground-3); border:1px solid var(--line); color:var(--ink);
+  padding:10px 15px; border-radius:var(--r-sm); cursor:pointer;
+  font-family:var(--f-body); font-size:14px; font-weight:500;
+  transition:border-color .2s, color .2s;
+}
+.cart-btn:hover{border-color:var(--volt); color:var(--volt)}
+.cart-btn__n{
+  min-width:19px; height:19px; padding:0 5px; border-radius:10px;
+  background:var(--volt); color:#160F04; font-weight:700; font-size:11px;
+  display:inline-flex; align-items:center; justify-content:center;
+}
+.cart-btn__n:empty, .cart-btn__n[data-zero]{display:none}
+/* ---------- бургер ----------
+   До 900px горизонтальное меню не помещается, поэтому оно
+   превращается в панель под шапкой. Кнопка корзины остаётся
+   на виду: это главное действие, прятать его в меню нельзя. */
+.burger{
+  display:none; appearance:none; cursor:pointer; flex:none;
+  width:42px; height:42px; padding:0 11px;
+  background:var(--ground-3); border:1px solid var(--line); border-radius:var(--r-sm);
+  flex-direction:column; justify-content:center; gap:5px;
+  transition:border-color .2s;
+}
+.burger:hover{border-color:var(--volt)}
+.burger span{
+  display:block; height:2px; width:100%; background:var(--ink); border-radius:2px;
+  transition:transform .28s cubic-bezier(.2,.8,.2,1), opacity .2s;
+}
+.burger[aria-expanded="true"] span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.burger[aria-expanded="true"] span:nth-child(2){opacity:0}
+.burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+
+@media (max-width:900px){
+  .burger{display:flex}
+  .top__in{gap:14px}
+  .nav{
+    position:absolute; left:0; right:0; top:100%;
+    display:none; flex-direction:column; gap:0;
+    background:var(--ground-2); border-bottom:1px solid var(--line);
+    padding:6px 0 10px;
+    box-shadow:0 24px 40px -26px rgba(0,0,0,.95);
+  }
+  .nav.is-open{display:flex; animation:navDown .28s cubic-bezier(.2,.85,.25,1) both}
+  .nav a{
+    padding:14px 20px; font-size:16px; width:min(100% - 40px,var(--shell));
+    margin-inline:auto; border-bottom:1px solid var(--line-soft);
+  }
+  .nav a:last-child{border-bottom:0}
+  .nav a::after{display:none}
+  .nav a.is-here{color:var(--volt)}
+  @keyframes navDown{from{opacity:0; transform:translateY(-8px)} to{opacity:1; transform:none}}
+}
+@media (max-width:420px){
+  .cart-btn{padding:10px 12px; font-size:0; gap:0}
+  .cart-btn svg{width:17px; height:17px}
+  .cart-btn__n{font-size:11px}
+}
+
+/* ---------- герой ---------- */
+.hero{padding:clamp(48px,6vw,86px) 0 clamp(56px,7vw,96px); overflow:hidden}
+.hero__in{display:grid; grid-template-columns:1.06fr .94fr; gap:clamp(28px,4vw,64px); align-items:center}
+.hero h1{
+  font-size:clamp(30px,4.2vw,56px); line-height:1.04; letter-spacing:-.035em; text-wrap:initial;
+}
+.hero h1 em{font-style:normal; color:var(--volt); display:block; position:relative}
+.hero__sub{margin-top:24px; max-width:46ch; color:var(--ink-2); font-size:clamp(15.5px,1.3vw,17.5px); line-height:1.62}
+.hero__cta{display:flex; gap:14px; margin-top:32px; flex-wrap:wrap}
+.hero__meta{display:flex; gap:24px; margin-top:34px; flex-wrap:wrap; font-family:var(--f-body); font-size:14px; color:var(--ink-3)}
+.hero__meta span{display:flex; align-items:center; gap:8px}
+.hero__meta span::before{content:''; width:5px; height:5px; border-radius:50%; background:var(--ok)}
+.hero__art{position:relative; display:flex; justify-content:center; padding-bottom:40px}
+.hero__stage{position:relative; width:min(100%,430px)}
+.hero__stage > svg{width:100%; height:auto; overflow:visible; display:block}
+@media (max-width:940px){
+  .hero__in{grid-template-columns:1fr; gap:34px}
+  .hero__art{order:-1}
+  .hero__stage{width:min(78%,320px)}
+}
+
+/* сборка ПК из деталей */
+.part{transform-box:fill-box; opacity:0; animation:assemble .85s cubic-bezier(.18,.86,.24,1) forwards}
+@keyframes assemble{
+  from{opacity:0; transform:translate(var(--dx,0px),var(--dy,-60px)) rotate(var(--rot,0deg)) scale(var(--sc,1))}
+  to  {opacity:1; transform:none}
+}
+.fan{transform-box:fill-box; transform-origin:50% 50%; animation:spin 2.6s linear infinite}
+.fan--slow{animation-duration:4.4s}
+.fan--rev{animation-direction:reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pulse{animation:pulse 3.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.55} 50%{opacity:1}}
+.arc{animation:flick 5s steps(1,end) infinite}
+@keyframes flick{0%,86%,100%{opacity:0} 88%{opacity:.9} 90%{opacity:.15} 92%{opacity:1} 95%{opacity:0}}
+
+/* ============================================================
+   Сценарий героя: искрит → перегрев → взрыв → дым → починка
+   Фаза задаётся классом p-* на .hero__art, тайминг ведёт JS.
+   Цикл 18 с.
+   ============================================================ */
+.hero__hint{
+  position:absolute; left:50%; bottom:0; transform:translateX(-50%) rotate(-2.5deg);
+  font-family:var(--f-hand); font-weight:600; font-size:21px; letter-spacing:0;
+  color:var(--ink-2); white-space:nowrap; pointer-events:none; transition:opacity .45s;
+}
+@media (hover:none){ .hero__hint{display:none} }
+/* ---------- пометки мастера на сборке ----------
+   Три рукописные подписи со стрелками к узлам: кулер, вентиляторы,
+   поддон с кабелями. Появляются после того, как ПК собран. */
+.note{
+  position:absolute; z-index:3; pointer-events:none;
+  font-family:var(--f-hand); font-weight:600;
+  font-size:clamp(15px,1.35vw,20px); line-height:1.15;
+  color:rgba(255,255,255,.95); white-space:nowrap;
+  text-shadow:0 1px 10px rgba(8,7,6,.92), 0 0 3px rgba(8,7,6,.9);
+  opacity:0; animation:noteIn .9s cubic-bezier(.2,.85,.25,1) forwards;
+}
+.note svg{position:absolute; width:40px; height:32px; overflow:visible; opacity:.72}
+.note path{fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round}
+
+.note--1{--rot:-3deg;   top:1%;     left:5%;   animation-delay:2.2s}
+.note--1 svg{bottom:-27px; right:14px}
+.note--2{--rot:2.5deg;  top:45%;    right:-3%; animation-delay:2.55s}
+.note--2 svg{left:-46px; top:2px}
+.note--3{--rot:-2deg;   bottom:11%; left:1%;   animation-delay:2.9s}
+.note--3 svg{top:-26px; right:16px}
+
+@keyframes noteIn{
+  from{opacity:0; transform:translateY(7px) rotate(var(--rot,0deg))}
+  to  {opacity:1; transform:rotate(var(--rot,0deg))}
+}
+@keyframes noteOut{ to{opacity:0} }
+
+/* во время взрыва подписи убираем — они относятся к целой машине */
+.hero__art.p-boom .note,
+.hero__art.p-dark .note{animation:noteOut .3s ease forwards}
+.hero__art.p-repair .note,
+.hero__art.p-restored .note{animation:noteIn .9s cubic-bezier(.2,.85,.25,1) 1s forwards}
+
+@media (max-width:520px){ .note--2{right:-1%} }
+
+.hero__art .sparks, .hero__art .smoke, .hero__art .flash{opacity:0}
+.hero__art .flash, .hero__art .smoke circle{transform-box:fill-box; transform-origin:50% 50%}
+.hero__stage > svg{transform-origin:50% 60%}
+
+/* как только сценарий запущен, деталями управляют переходы, а не стартовая сборка */
+.hero__art.seq .hero__hint{opacity:0}
+.hero__art.seq .part{
+  animation:none; opacity:1;
+  transition:transform .9s cubic-bezier(.2,.8,.2,1), opacity .5s;
+}
+
+/* 0–5 с — искрит */
+.hero__art.p-spark .sparks{opacity:1; animation:sparkFlick .44s steps(1,end) infinite}
+.hero__art.p-spark .fan{animation-duration:1.4s}
+.hero__art.p-spark .pulse{animation-duration:.9s}
+
+/* 5–7 с — перегрузка: тряска и вентиляторы вразнос */
+.hero__art.p-overload .sparks{opacity:1; animation:sparkFlick .15s steps(1,end) infinite}
+.hero__art.p-overload .fan{animation-duration:.28s}
+.hero__art.p-overload .pulse{animation-duration:.24s}
+.hero__art.p-overload .hero__stage{animation:shake .085s linear infinite}
+
+/* 7–8 с — взрыв */
+.hero__art.p-boom .flash{opacity:1; animation:flash .55s ease-out forwards}
+.hero__art.p-boom .part{
+  transform:translate(var(--ex,0px),var(--ey,0px)) rotate(var(--er,0deg));
+  transition:transform .8s cubic-bezier(.12,.72,.32,1), opacity .4s;
+}
+.hero__art.p-boom .fan, .hero__art.p-boom .pulse,
+.hero__art.p-boom .arc, .hero__art.p-boom .led{animation:none; opacity:0}
+
+/* 8–12 с — обломки и дым */
+.hero__art.p-dark .part{
+  transform:translate(var(--ex,0px),var(--ey,0px)) rotate(var(--er,0deg)); opacity:.45;
+}
+.hero__art.p-dark .fan, .hero__art.p-dark .pulse,
+.hero__art.p-dark .arc, .hero__art.p-dark .led{animation:none; opacity:0}
+.hero__art.p-dark .smoke{opacity:1}
+.hero__art.p-dark .smoke circle{animation:smoke 2.8s ease-out infinite}
+.hero__art.p-dark .smoke circle:nth-child(2){animation-delay:.6s}
+.hero__art.p-dark .smoke circle:nth-child(3){animation-delay:1.2s}
+.hero__art.p-dark .smoke circle:nth-child(4){animation-delay:1.8s}
+
+/* 12–16.8 с — детали возвращаются на место по очереди */
+.hero__art.p-repair .part{
+  transform:none; opacity:1;
+  transition:transform 1.05s cubic-bezier(.2,.85,.25,1) var(--rd,0s), opacity .5s var(--rd,0s);
+}
+.hero__art.p-repair .fan{animation:spin 2.6s linear infinite}
+.hero__art.p-repair .floor{animation:pulse 3.4s ease-in-out infinite 2.6s}
+
+/* 16.8–18 с — питание вернулось */
+.hero__art.p-restored .part{transform:none; opacity:1}
+.hero__art.p-restored .led{animation:blink .28s steps(1,end) 5}
+
+/* сценарий остановлен — всё на местах */
+.hero__art.p-idle .part{transform:none; opacity:1}
+
+@keyframes sparkFlick{0%{opacity:0} 18%{opacity:1} 36%{opacity:.15} 54%{opacity:1} 72%{opacity:.3} 100%{opacity:0}}
+@keyframes flash{0%{opacity:0; transform:scale(.15)} 10%{opacity:1} 100%{opacity:0; transform:scale(2.7)}}
+@keyframes shake{
+  0%{transform:translate(0,0)} 25%{transform:translate(2.5px,-1.5px)}
+  50%{transform:translate(-2.5px,1.5px)} 75%{transform:translate(1.5px,2.5px)}
+  100%{transform:translate(-1.5px,-1.5px)}
+}
+@keyframes smoke{
+  0%{opacity:0; transform:translate(0,0) scale(.45)}
+  22%{opacity:.42}
+  100%{opacity:0; transform:translate(var(--sx,0px),-96px) scale(2.3)}
+}
+@keyframes blink{0%,100%{opacity:1} 50%{opacity:.08}}
+
+/* ---------- показатели ---------- */
+.stats{display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--line-soft); border-block:1px solid var(--line-soft)}
+.stat{background:var(--ground); padding:30px 26px}
+.stat__n{font-family:var(--f-disp); font-size:clamp(36px,4.4vw,54px); font-weight:800; line-height:1; color:var(--volt); font-variant-numeric:tabular-nums}
+.stat__n small{font-size:.44em; color:var(--ink-2); margin-left:5px}
+.stat__l{font-family:var(--f-body); font-size:13.5px; color:var(--ink-3); margin-top:10px; line-height:1.4}
+@media (max-width:860px){ .stats{grid-template-columns:repeat(2,1fr)} }
+
+/* ---------- панель подбора ---------- */
+.tools{
+  display:flex; gap:26px; align-items:center; justify-content:space-between; flex-wrap:wrap;
+  background:var(--ground-2); border:1px solid var(--line); border-radius:var(--r-md);
+  padding:20px 24px; margin-bottom:34px;
+}
+.chips{display:flex; gap:9px; flex-wrap:wrap}
+.chip{
+  appearance:none; cursor:pointer; background:transparent; color:var(--ink-2);
+  border:1px solid var(--line); border-radius:100px; padding:8px 17px;
+  font-family:var(--f-body); font-size:14px; font-weight:500; letter-spacing:-.005em;
+  transition:.2s ease;
+}
+.chip:hover{color:var(--ink); border-color:var(--ink-3)}
+.chip[aria-pressed="true"]{background:var(--volt); border-color:var(--volt); color:#160F04; font-weight:600}
+.budget{display:flex; align-items:center; gap:15px; min-width:min(100%,340px); flex:1}
+.budget label{font-family:var(--f-body); font-size:14px; color:var(--ink-3); white-space:nowrap}
+.budget output{font-family:var(--f-mono); font-size:13.5px; color:var(--volt); font-weight:700; white-space:nowrap; font-variant-numeric:tabular-nums}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; flex:1; height:2px; background:var(--line); border-radius:2px; cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:17px; height:17px; border-radius:50%; background:var(--volt);
+  box-shadow:0 0 0 4px rgba(255,154,31,.18); cursor:pointer;
+}
+input[type=range]::-moz-range-thumb{
+  width:17px; height:17px; border:0; border-radius:50%; background:var(--volt);
+  box-shadow:0 0 0 4px rgba(255,154,31,.18); cursor:pointer;
+}
+
+/* ---------- каталог ---------- */
+.grid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px}
+@media (max-width:1080px){ .grid{grid-template-columns:repeat(2,1fr)} }
+@media (max-width:680px){ .grid{grid-template-columns:1fr} }
+
+.card{
+  position:relative; display:flex; flex-direction:column;
+  background:linear-gradient(180deg,var(--ground-2),var(--ground));
+  border:1px solid var(--line); border-radius:var(--r-md); overflow:hidden;
+  transition:border-color .3s, transform .3s, box-shadow .35s;
+}
+.card::after{
+  content:''; position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity .35s;
+  background:radial-gradient(70% 45% at 50% 0%, rgba(255,154,31,.16), transparent 70%);
+}
+.card:hover{transform:translateY(-5px); border-color:#4A3D2B; box-shadow:0 26px 50px -28px rgba(0,0,0,.9)}
+.card:hover::after{opacity:1}
+.card.is-out{opacity:.26; filter:saturate(.25)}
+.card.is-hidden{display:none}
+
+.card__tag{
+  position:absolute; top:14px; right:14px; z-index:3;
+  font-family:var(--f-body); font-size:11.5px; letter-spacing:.02em; text-transform:uppercase;
+  background:var(--volt); color:#160F04; font-weight:700; padding:5px 11px; border-radius:100px;
+}
+.card__tag--cold{background:var(--arc); color:#06222E}
+.card__art{
+  position:relative; padding:26px 20px 10px; display:flex; justify-content:center; align-items:flex-end;
+  min-height:224px; background:radial-gradient(60% 60% at 50% 78%, rgba(255,154,31,.07), transparent 70%);
+}
+.card__art > svg:not(.zap){width:auto; transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+.card:hover .card__art > svg:not(.zap){transform:translateY(-7px) scale(1.035)}
+
+/* разряд по корпусу при наведении */
+.zap{
+  position:absolute; inset:0; width:100%; height:100%;
+  pointer-events:none; overflow:visible; opacity:0; transform:none !important;
+}
+.zap path{
+  fill:none; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round;
+  stroke-dasharray:90; stroke-dashoffset:90; opacity:0;
+}
+.zap circle{opacity:0; transform-box:fill-box; transform-origin:50% 50%}
+.card:hover .zap, .modal__art:hover .zap{opacity:1}
+.card:hover .zap path, .modal__art:hover .zap path{animation:strike 1.9s cubic-bezier(.2,.7,.3,1) infinite}
+.card:hover .zap path:nth-of-type(2), .modal__art:hover .zap path:nth-of-type(2){animation-delay:.16s}
+.card:hover .zap path:nth-of-type(3), .modal__art:hover .zap path:nth-of-type(3){animation-delay:.33s}
+.card:hover .zap circle, .modal__art:hover .zap circle{animation:spark 1.9s ease-out infinite}
+.card:hover .zap circle:nth-of-type(2), .modal__art:hover .zap circle:nth-of-type(2){animation-delay:.33s}
+@keyframes strike{
+  0%   {stroke-dashoffset:90; opacity:0}
+  8%   {opacity:1}
+  26%  {stroke-dashoffset:0; opacity:1}
+  38%  {opacity:.18}
+  44%  {opacity:1}
+  56%  {opacity:.9}
+  72%  {stroke-dashoffset:0; opacity:0}
+  100% {stroke-dashoffset:0; opacity:0}
+}
+@keyframes spark{
+  0%,18% {opacity:0; transform:scale(.4)}
+  30%    {opacity:1; transform:scale(1)}
+  58%    {opacity:.5; transform:scale(1.9)}
+  70%,100%{opacity:0; transform:scale(2.4)}
+}
+.card__body{padding:0 22px 22px; display:flex; flex-direction:column; flex:1; gap:16px}
+.card__volt{
+  font-family:var(--f-mono); font-size:11px; letter-spacing:.2em; color:var(--volt);
+  display:flex; justify-content:space-between; align-items:center;
+}
+.card__volt b{color:var(--ink-3); font-weight:400; letter-spacing:.1em}
+.card__name{font-family:var(--f-disp); font-size:clamp(24px,2.3vw,29px); font-weight:800; text-transform:uppercase; line-height:1; letter-spacing:-.03em; margin-top:-4px}
+.card__for{color:var(--ink-2); font-size:14.5px; line-height:1.5; margin-top:-6px}
+.spec{display:flex; flex-direction:column; gap:0; border-top:1px solid var(--line-soft)}
+.spec div{
+  display:flex; justify-content:space-between; gap:12px; padding:8px 0;
+  border-bottom:1px solid var(--line-soft); font-size:13.5px;
+}
+.spec dt{color:var(--ink-3); font-family:var(--f-body); font-size:13.5px; padding-top:1px; flex:none}
+.spec dd{margin:0; text-align:right; color:var(--ink); font-weight:500}
+.card__foot{margin-top:auto; display:flex; flex-direction:column; gap:13px}
+.price{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
+.price b{font-family:var(--f-disp); font-size:clamp(25px,2.4vw,30px); font-weight:800; letter-spacing:-.035em; font-variant-numeric:tabular-nums}
+.price s{
+  color:var(--ink-3); font-family:var(--f-body); font-size:15px; font-weight:500;
+  font-variant-numeric:tabular-nums; text-decoration-thickness:1px;
+}
+.price i{
+  font-style:normal; font-family:var(--f-body); font-weight:600; font-size:12.5px;
+  letter-spacing:-.005em; font-variant-numeric:tabular-nums; color:var(--ok);
+  background:rgba(111,214,143,.13); padding:3px 9px; border-radius:100px; white-space:nowrap;
+}
+.card__btns{display:flex; gap:9px}
+.card__btns .btn{flex:1}
+.empty{
+  grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--ink-3);
+  border:1px dashed var(--line); border-radius:var(--r-md); font-size:15px;
+}
+
+/* ---------- преимущества ---------- */
+.feats{display:grid; grid-template-columns:repeat(4,1fr); gap:20px}
+@media (max-width:1000px){ .feats{grid-template-columns:repeat(2,1fr)} }
+@media (max-width:600px){ .feats{grid-template-columns:1fr} }
+.feat{border-top:2px solid var(--volt); padding-top:22px}
+.feat h3{font-size:19px; margin-bottom:11px}
+.feat p{color:var(--ink-2); font-size:14.5px; line-height:1.6}
+.feat .hand{display:block; margin-top:14px; font-size:19px; color:var(--volt); transform:rotate(-1.5deg)}
+
+/* ---------- процесс ---------- */
+.steps{display:grid; grid-template-columns:repeat(5,1fr); gap:0}
+@media (max-width:1000px){ .steps{grid-template-columns:1fr} }
+.step{position:relative; padding:26px 24px 26px 0; border-top:1px solid var(--line)}
+.step__n{font-family:var(--f-mono); font-size:11px; letter-spacing:.2em; color:var(--volt)}
+.step h3{font-size:19px; margin:13px 0 10px}
+.step p{color:var(--ink-2); font-size:14px; line-height:1.6}
+.step::before{
+  content:''; position:absolute; top:-1px; left:0; height:1px; width:0; background:var(--volt);
+  transition:width .7s cubic-bezier(.2,.8,.2,1);
+}
+.step.in::before{width:100%}
+.step:nth-child(2)::before{transition-delay:.12s}
+.step:nth-child(3)::before{transition-delay:.24s}
+.step:nth-child(4)::before{transition-delay:.36s}
+.step:nth-child(5)::before{transition-delay:.48s}
+
+/* ---------- отзывы ---------- */
+.revs{display:grid; grid-template-columns:repeat(3,1fr); gap:20px}
+@media (max-width:940px){ .revs{grid-template-columns:1fr} }
+.rev{background:var(--ground-2); border:1px solid var(--line); border-radius:var(--r-md); padding:26px}
+.rev__q{font-size:16px; line-height:1.65; color:var(--ink); margin-bottom:20px}
+.rev__w{display:flex; gap:13px; align-items:center; border-top:1px solid var(--line-soft); padding-top:17px}
+.rev__av{
+  width:38px; height:38px; border-radius:50%; flex:none; display:grid; place-items:center;
+  background:var(--volt-soft); color:var(--volt); font-family:var(--f-disp); font-weight:800; font-size:16px;
+}
+.rev__n{font-weight:600; font-size:14.5px}
+.rev__c{font-family:var(--f-body); font-size:13px; color:var(--ink-3)}
+.rev__s{margin-left:auto; color:var(--volt); font-size:13px; letter-spacing:2px}
+
+/* ---------- FAQ ---------- */
+.faq{max-width:840px}
+.q{border-bottom:1px solid var(--line)}
+.q summary{
+  cursor:pointer; list-style:none; padding:21px 0; display:flex; gap:18px; align-items:center;
+  font-family:var(--f-disp); font-size:clamp(15.5px,1.55vw,18px); font-weight:600; letter-spacing:-.028em;
+  line-height:1.35;
+}
+.q summary::-webkit-details-marker{display:none}
+.q summary::after{
+  content:'+'; margin-left:auto; color:var(--volt); font-family:var(--f-mono); font-size:22px;
+  transition:transform .3s ease; flex:none;
+}
+.q[open] summary::after{transform:rotate(45deg)}
+.q__a{padding:0 0 24px 0; color:var(--ink-2); max-width:64ch; font-size:15.5px; line-height:1.65}
+
+/* ---------- «остались вопросы» ---------- */
+.ask{display:grid; grid-template-columns:1fr 1fr; gap:clamp(30px,5vw,72px); align-items:start}
+@media (max-width:900px){ .ask{grid-template-columns:1fr} }
+.ask__side .lead{margin-bottom:28px}
+.ask__contacts{list-style:none; margin:0 0 22px; padding:0; display:flex; flex-direction:column; gap:14px}
+.ask__contacts li{display:flex; align-items:center; gap:13px; font-size:15.5px}
+.ask__contacts svg{width:17px; height:17px; color:var(--volt); flex:none}
+.ask__contacts a{color:var(--ink); text-decoration:none; transition:color .2s}
+.ask__contacts a:hover{color:var(--volt)}
+.ask__contacts small{color:var(--ink-3); font-size:14px}
+.ask__side .hand{display:block; font-size:22px; color:var(--volt); transform:rotate(-1.5deg)}
+
+.ask__form{
+  background:var(--ground-2); border:1px solid var(--line); border-radius:var(--r-md);
+  padding:clamp(22px,2.6vw,32px); display:flex; flex-direction:column; gap:15px;
+}
+.ask__form .field textarea{
+  background:var(--ground); border:1px solid var(--line); color:var(--ink);
+  padding:12px 13px; border-radius:var(--r-sm); font-family:var(--f-body); font-size:15px;
+  line-height:1.55; resize:vertical; min-height:112px;
+}
+.ask__form .field textarea:focus{border-color:var(--volt); outline:none}
+.ask__form .field.bad textarea{border-color:#FF8360}
+.ask__note{color:var(--ink-3); font-size:12.5px; line-height:1.5}
+.ask__row{display:grid; grid-template-columns:1fr 1fr; gap:15px}
+@media (max-width:560px){ .ask__row{grid-template-columns:1fr} }
+
+/* ---------- футер ---------- */
+.foot{border-top:1px solid var(--line); padding:60px 0 34px; background:var(--ground-2)}
+.foot__grid{display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:34px; margin-bottom:44px}
+@media (max-width:900px){ .foot__grid{grid-template-columns:1fr 1fr} }
+@media (max-width:520px){ .foot__grid{grid-template-columns:1fr} }
+.foot h4{font-family:var(--f-disp); font-size:13px; font-weight:600; letter-spacing:-.02em; color:var(--ink); margin-bottom:16px}
+.foot ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; font-size:14.5px}
+.foot a{color:var(--ink-2); text-decoration:none; transition:color .2s}
+.foot a:hover{color:var(--volt)}
+.foot__note{color:var(--ink-3); font-size:14px; line-height:1.6; max-width:36ch; margin-top:16px}
+.foot__bar{
+  padding-top:8px;
+  display:flex; justify-content:center; align-items:center; gap:26px; flex-wrap:wrap;
+  font-family:var(--f-mono); font-size:11.5px; letter-spacing:.06em; color:var(--ink-3); text-align:center;
+}
+.foot__by{color:var(--ink-2); text-decoration:none; transition:color .2s}
+.foot__by:hover{color:var(--volt)}
+
+/* ---------- корзина ---------- */
+.scrim{
+  position:fixed; inset:0; z-index:80; background:rgba(8,7,6,.72); backdrop-filter:blur(3px);
+  opacity:0; visibility:hidden; transition:opacity .3s, visibility .3s;
+}
+.scrim.on{opacity:1; visibility:visible}
+.drawer{
+  position:fixed; top:0; right:0; bottom:0; z-index:90; width:min(100%,432px);
+  background:var(--ground-2); border-left:1px solid var(--line);
+  display:flex; flex-direction:column; transform:translateX(102%);
+  transition:transform .38s cubic-bezier(.3,.85,.25,1);
+}
+.drawer.on{transform:none}
+.drawer__top{display:flex; align-items:center; gap:14px; padding:22px 24px; border-bottom:1px solid var(--line)}
+.drawer__top h3{font-size:22px; margin-right:auto}
+.x{
+  appearance:none; background:transparent; border:1px solid var(--line); color:var(--ink-2);
+  width:34px; height:34px; border-radius:var(--r-sm); cursor:pointer; font-size:17px; line-height:1;
+  transition:.2s;
+}
+.x:hover{border-color:var(--volt); color:var(--volt)}
+.drawer__body{flex:1; overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:15px}
+.line{display:flex; gap:14px; border-bottom:1px solid var(--line-soft); padding-bottom:15px}
+.line__art{width:56px; height:66px; flex:none; background:var(--ground-3); border-radius:var(--r-sm); display:grid; place-items:center}
+.line__art svg{height:54px; width:auto}
+.line__mid{flex:1; min-width:0}
+.line__n{font-family:var(--f-disp); font-size:17px; font-weight:800; text-transform:uppercase; letter-spacing:-.03em; line-height:1.1}
+.line__v{font-family:var(--f-mono); font-size:10.5px; color:var(--volt); letter-spacing:.1em; margin-top:4px}
+.line__p{font-family:var(--f-mono); font-size:13.5px; margin-top:7px; font-variant-numeric:tabular-nums}
+.qty{display:flex; align-items:center; gap:4px; margin-top:9px}
+.qty button{
+  width:25px; height:25px; border:1px solid var(--line); background:transparent; color:var(--ink-2);
+  cursor:pointer; border-radius:var(--r-sm); font-size:14px; line-height:1; transition:.2s;
+}
+.qty button:hover{border-color:var(--volt); color:var(--volt)}
+.qty span{font-family:var(--f-mono); font-size:13px; min-width:22px; text-align:center}
+.qty .rm{margin-left:8px; border:0; color:var(--ink-3); font-family:var(--f-body); font-size:13px; width:auto; padding:0 4px}
+.qty .rm:hover{color:#FF6B4A}
+.drawer__foot{border-top:1px solid var(--line); padding:20px 24px 24px; display:flex; flex-direction:column; gap:14px}
+/* авторский display:flex перебивает браузерный [hidden]{display:none} — возвращаем явно */
+.drawer__foot[hidden]{display:none}
+.sum{display:flex; justify-content:space-between; align-items:baseline; font-family:var(--f-body); font-size:14px; color:var(--ink-3)}
+.sum span:last-child{font-family:var(--f-mono); font-variant-numeric:tabular-nums}
+.sum--total{color:var(--ink); font-size:15px}
+.sum--total b{font-family:var(--f-disp); font-size:26px; font-weight:800; letter-spacing:-.035em; color:var(--volt); font-variant-numeric:tabular-nums}
+/* пустая корзина — не заглушка, а предложение */
+.empty-wrap{margin:auto 0; display:flex; flex-direction:column; gap:24px; width:100%}
+.drawer__empty{text-align:center; display:flex; flex-direction:column; align-items:center; gap:12px}
+.drawer__empty svg{width:42px; height:42px; color:var(--volt); opacity:.85}
+.drawer__empty h4{font-size:19px}
+.drawer__empty p{color:var(--ink-3); font-size:14.5px; line-height:1.6; max-width:30ch}
+
+.offer{
+  border:1px solid var(--line); border-radius:var(--r-md); padding:16px;
+  background:var(--ground-3); display:flex; flex-direction:column; gap:14px;
+}
+.offer__label{
+  font-family:var(--f-mono); font-size:10px; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--volt);
+}
+.offer__row{display:flex; gap:14px; align-items:center}
+.offer__mid{flex:1; min-width:0}
+.offer__price{display:flex; align-items:baseline; gap:9px; margin-top:8px; flex-wrap:wrap}
+.offer__price b{font-family:var(--f-disp); font-size:20px; font-weight:800; letter-spacing:-.035em; font-variant-numeric:tabular-nums}
+.offer__price s{color:var(--ink-3); font-size:13px; font-variant-numeric:tabular-nums}
+
+/* форма заказа */
+.form{display:flex; flex-direction:column; gap:12px}
+.field{display:flex; flex-direction:column; gap:6px}
+.field label{font-family:var(--f-body); font-size:13px; font-weight:500; color:var(--ink-3)}
+.field input, .field select{
+  background:var(--ground); border:1px solid var(--line); color:var(--ink);
+  padding:12px 13px; border-radius:var(--r-sm); font-family:var(--f-body); font-size:14.5px;
+}
+.field input:focus, .field select:focus{border-color:var(--volt); outline:none}
+.field .err{color:#FF8360; font-size:12.5px; display:none}
+.field.bad input{border-color:#FF8360}
+.field.bad .err{display:block}
+.done{text-align:center; padding:30px 10px; display:flex; flex-direction:column; gap:13px; align-items:center}
+.done__i{width:52px; height:52px; border-radius:50%; background:rgba(111,214,143,.13); color:var(--ok); display:grid; place-items:center; font-size:24px}
+.done p{color:var(--ink-2); font-size:14.5px; line-height:1.6}
+
+/* ---------- модалка товара ---------- */
+.modal{
+  position:fixed; z-index:95; inset:auto; left:50%; top:50%; transform:translate(-50%,-46%) scale(.97);
+  width:min(100% - 32px, 940px); max-height:88vh; overflow-y:auto;
+  background:var(--ground-2); border:1px solid var(--line); border-radius:var(--r-lg);
+  opacity:0; visibility:hidden; transition:opacity .3s, transform .3s, visibility .3s;
+}
+.modal.on{opacity:1; visibility:visible; transform:translate(-50%,-50%) scale(1)}
+.modal__x{position:absolute; top:16px; right:16px; z-index:4}
+.modal__grid{display:grid; grid-template-columns:.85fr 1.15fr; gap:0}
+@media (max-width:820px){ .modal__grid{grid-template-columns:1fr} }
+.modal__art{
+  position:relative;
+  padding:40px 24px; display:grid; place-items:center; border-right:1px solid var(--line);
+  background:radial-gradient(60% 55% at 50% 60%, rgba(255,154,31,.10), transparent 72%);
+}
+.modal__art > svg:not(.zap){width:auto; height:min(46vh,320px)}
+.modal__body{padding:34px}
+.modal__body h3{font-size:clamp(26px,3.2vw,38px); margin:8px 0 8px; text-transform:uppercase}
+.modal__for{color:var(--ink-2); font-size:15px; line-height:1.6; margin-bottom:24px}
+.tbl{width:100%; border-collapse:collapse; font-size:14px; margin-bottom:26px}
+.tbl th{
+  text-align:left; font-family:var(--f-body); font-size:14px;
+  color:var(--ink-3); font-weight:400; padding:9px 14px 9px 0; width:38%; vertical-align:top;
+}
+.tbl td{padding:9px 0; border-bottom:1px solid var(--line-soft); font-weight:500; line-height:1.5}
+.tbl tr:last-child td, .tbl tr:last-child th{border-bottom:0}
+.fps{display:flex; flex-direction:column; gap:11px; margin-bottom:28px}
+.fps__row{display:grid; grid-template-columns:150px 1fr 62px; gap:13px; align-items:center; font-size:13.5px}
+.fps__bar{height:7px; background:var(--ground-3); border-radius:4px; overflow:hidden}
+.fps__bar i{display:block; height:100%; width:0; background:linear-gradient(90deg,var(--volt-deep),var(--volt)); border-radius:4px; transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.fps__v{font-family:var(--f-mono); font-size:13px; text-align:right; color:var(--volt); font-variant-numeric:tabular-nums}
+.fps__note{font-family:var(--f-body); font-size:13px; color:var(--ink-3); margin-top:-18px; margin-bottom:26px}
+@media (max-width:560px){ .fps__row{grid-template-columns:110px 1fr 54px; font-size:12.5px} .modal__body{padding:24px} }
+
+/* ---------- плавное появление страницы ----------
+   Вуаль поверх всего растворяется при загрузке. Отдельным слоем,
+   а не прозрачностью body: анимировать opacity на body нельзя —
+   он бы стал точкой отсчёта для position:fixed, и шапка дёрнулась бы. */
+.page-veil{
+  position:fixed; inset:0; z-index:200; background:var(--ground);
+  pointer-events:none; animation:veilOut .75s cubic-bezier(.4,0,.2,1) forwards;
+}
+@keyframes veilOut{
+  0%  {opacity:1}
+  99% {opacity:0; visibility:visible}
+  100%{opacity:0; visibility:hidden}
+}
+
+/* ---------- появление по скроллу ---------- */
+.rise{
+  opacity:0; transform:translateY(20px);
+  transition:opacity 1.05s cubic-bezier(.16,.84,.28,1), transform 1.05s cubic-bezier(.16,.84,.28,1);
+  will-change:opacity, transform;
+}
+.rise.in{opacity:1; transform:none; will-change:auto}
+.rise[data-d="1"]{transition-delay:.1s}
+.rise[data-d="2"]{transition-delay:.2s}
+.rise[data-d="3"]{transition-delay:.3s}
+.rise[data-d="4"]{transition-delay:.4s}
+.rise[data-d="5"]{transition-delay:.5s}
+
+/* ---------- разделитель-разряд ---------- */
+.bolt{display:flex; justify-content:center; padding:8px 0 0}
+.bolt svg{width:min(100%,760px); height:auto; opacity:.85}
+.bolt path{stroke-dasharray:1200; stroke-dashoffset:1200}
+.bolt.in path{animation:draw 1.5s cubic-bezier(.3,.7,.3,1) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.001s !important; animation-iteration-count:1 !important; transition-duration:.001s !important}
+  .rise{opacity:1; transform:none}
+  .part{opacity:1}
+  .bolt path{stroke-dashoffset:0}
+  .cursor-glow{display:none}
+}
+
+/* ============================================================
+   КОНФИГУРАТОР
+   ============================================================ */
+.presets{display:flex; gap:9px; flex-wrap:wrap; margin-bottom:26px; align-items:center}
+.presets__label{font-family:var(--f-body); font-size:14px; color:var(--ink-3); margin-right:6px}
+
+.cfg{display:grid; grid-template-columns:1fr 372px; gap:clamp(22px,2.6vw,34px); align-items:start}
+@media (max-width:1000px){ .cfg{grid-template-columns:1fr} }
+
+.cfg__list{display:flex; flex-direction:column; gap:10px}
+.row{background:var(--ground-2); border:1px solid var(--line); border-radius:var(--r-md); overflow:hidden}
+.row.is-open{border-color:#4A3D2B}
+.row__head{
+  width:100%; appearance:none; background:transparent; border:0; cursor:pointer; color:var(--ink);
+  display:grid; grid-template-columns:170px 1fr auto 22px; gap:16px; align-items:center;
+  padding:16px 18px; text-align:left; transition:background .2s;
+}
+.row__head:hover{background:var(--ground-3)}
+.row__cat{font-family:var(--f-body); font-size:13.5px; color:var(--ink-3)}
+.row__pick{font-family:var(--f-disp); font-size:16px; font-weight:600; letter-spacing:-.025em; line-height:1.25}
+.row__price{font-family:var(--f-mono); font-size:14px; font-variant-numeric:tabular-nums; color:var(--ink-2)}
+.row__chev{color:var(--volt); font-size:13px; transition:transform .3s ease}
+.row.is-open .row__chev{transform:rotate(180deg)}
+@media (max-width:640px){
+  .row__head{grid-template-columns:1fr auto; row-gap:5px}
+  .row__cat{grid-column:1/-1}
+  .row__chev{display:none}
+}
+
+.row__body{display:none; padding:0 18px 18px; border-top:1px solid var(--line-soft)}
+.row.is-open .row__body{display:block}
+.row__hint{color:var(--ink-3); font-size:13.5px; margin:14px 0 12px}
+.opts{display:flex; flex-direction:column; gap:7px}
+.opt{
+  appearance:none; cursor:pointer; text-align:left; width:100%;
+  background:var(--ground); border:1px solid var(--line); border-radius:var(--r-sm);
+  color:var(--ink); padding:12px 14px; display:flex; gap:14px; align-items:center;
+  transition:border-color .2s, background .2s;
+}
+.opt:hover{border-color:var(--ink-3)}
+.opt__main{display:flex; flex-direction:column; gap:3px; flex:1; min-width:0}
+.opt__name{font-size:14.5px; font-weight:500}
+.opt__note{font-size:12.5px; color:var(--ink-3)}
+.opt__price{font-family:var(--f-mono); font-size:13.5px; font-variant-numeric:tabular-nums; flex:none}
+.opt.is-on{border-color:var(--volt); background:var(--volt-soft)}
+.opt.is-on .opt__price{color:var(--volt)}
+.opt.is-bad{opacity:.6}
+.opt.is-bad .opt__note{color:#FF8360}
+
+.cfg__side{position:sticky; top:88px}
+@media (max-width:1000px){ .cfg__side{position:static} }
+.sumcard{
+  background:var(--ground-2); border:1px solid var(--line); border-radius:var(--r-md);
+  padding:22px; display:flex; flex-direction:column; gap:18px;
+}
+.sumcard__top{display:flex; flex-direction:column; gap:6px}
+.sumcard__price{
+  font-family:var(--f-disp); font-size:34px; font-weight:800; letter-spacing:-.04em;
+  color:var(--volt); font-variant-numeric:tabular-nums; line-height:1;
+}
+.sumcard__facts{display:flex; flex-direction:column; gap:0; margin:0}
+.sumcard__facts div{
+  display:flex; justify-content:space-between; gap:14px; padding:9px 0;
+  border-bottom:1px solid var(--line-soft); font-size:13.5px;
+}
+.sumcard__facts div:last-child{border-bottom:0}
+.sumcard__facts dt{color:var(--ink-3)}
+.sumcard__facts dd{margin:0; font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+
+.issues{display:flex; flex-direction:column; gap:9px}
+.issue{
+  display:flex; gap:12px; align-items:flex-start; justify-content:space-between;
+  border-radius:var(--r-sm); padding:12px 13px; font-size:13.5px; line-height:1.5;
+}
+.issue--error{background:rgba(255,131,96,.12); color:#FFC0AE}
+.issue--warn{background:rgba(255,198,77,.11); color:#FFDF9E}
+.issue--ok{background:rgba(111,214,143,.11); color:#B4E8C6}
+.issue__fix{
+  appearance:none; cursor:pointer; flex:none; background:transparent; color:inherit;
+  border:1px solid currentColor; border-radius:100px; padding:4px 12px;
+  font-family:var(--f-body); font-size:12.5px; font-weight:600; opacity:.85; transition:opacity .2s;
+}
+.issue__fix:hover{opacity:1}
+.btn[disabled]{opacity:.4; cursor:not-allowed; transform:none; box-shadow:none}
+
+/* ============================================================
+   СТРАНИЦА КАТАЛОГА: шапка страницы
+   ============================================================ */
+.pagehead{padding:clamp(38px,5vw,64px) 0 0}
+.pagehead h1{font-size:clamp(30px,4.2vw,56px); line-height:1.04; letter-spacing:-.035em}
+.crumbs{
+  display:flex; gap:9px; align-items:center; margin-bottom:18px;
+  font-family:var(--f-body); font-size:13.5px; color:var(--ink-3);
+}
+.crumbs a{color:var(--ink-3); text-decoration:none; transition:color .2s}
+.crumbs a:hover{color:var(--volt)}
+.nav a.is-here{color:var(--volt)}
+.nav a.is-here::after{right:0}
+
+/* карточка-приглашение в конфигуратор внутри каталога */
+.cta-card{
+  grid-column:1/-1; display:flex; gap:26px; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; background:linear-gradient(120deg,var(--ground-2),var(--ground-3));
+  border:1px solid var(--line); border-radius:var(--r-md); padding:clamp(22px,3vw,34px);
+}
+.cta-card h3{font-size:clamp(20px,2.2vw,26px); margin-bottom:9px}
+.cta-card p{color:var(--ink-2); font-size:15px; line-height:1.6; max-width:52ch}
+
+/* ============================================================
+   СОГЛАСИЕ И COOKIE
+   ============================================================ */
+
+/* чекбокс согласия в формах */
+.agree{display:flex; gap:11px; align-items:flex-start; cursor:pointer; user-select:none}
+.agree input{
+  appearance:none; -webkit-appearance:none; flex:none; margin:1px 0 0;
+  width:19px; height:19px; border:1px solid var(--line); border-radius:4px;
+  background:var(--ground); cursor:pointer; position:relative; transition:.2s;
+}
+.agree input:hover{border-color:var(--ink-3)}
+.agree input:checked{background:var(--volt); border-color:var(--volt)}
+.agree input:checked::after{
+  content:''; position:absolute; left:6px; top:2px; width:5px; height:10px;
+  border:solid #160F04; border-width:0 2px 2px 0; transform:rotate(43deg);
+}
+.agree span{font-size:13px; line-height:1.5; color:var(--ink-2)}
+.agree a{color:var(--ink); text-decoration:underline; text-underline-offset:2px; text-decoration-thickness:1px}
+.agree a:hover{color:var(--volt)}
+.field--agree.bad .agree input{border-color:#FF8360}
+.field--agree.bad .err{display:block}
+
+/* баннер cookie */
+.cookie{
+  position:fixed; left:0; right:0; bottom:0; z-index:70; display:none;
+  padding:16px; background:linear-gradient(180deg, transparent, rgba(10,9,8,.9) 40%);
+}
+/* Задержку держит CSS, а не таймер в скрипте: фоновые вкладки таймеры
+   тормозят, а анимация с fill-mode both честно ждёт своей секунды.
+   При открытии из подвала JS обнуляет --cd, чтобы показать сразу. */
+.cookie.is-on{display:block; animation:cookieUp .55s cubic-bezier(.2,.85,.25,1) var(--cd,.6s) both}
+@keyframes cookieUp{from{opacity:0; transform:translateY(18px)} to{opacity:1; transform:none}}
+.cookie__in{
+  width:min(100% - 8px, var(--shell)); margin-inline:auto;
+  background:var(--ground-2); border:1px solid var(--line); border-radius:var(--r-md);
+  padding:18px 22px; display:flex; gap:22px; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; box-shadow:0 22px 50px -26px rgba(0,0,0,.95);
+}
+.cookie__text{color:var(--ink-2); font-size:14px; line-height:1.6; max-width:68ch; flex:1; min-width:min(100%,320px)}
+.cookie__acts{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+.cookie__more{color:var(--ink-3); font-size:13.5px; text-decoration:underline; text-underline-offset:2px}
+.cookie__more:hover{color:var(--volt)}
+.foot__cookie{
+  appearance:none; background:transparent; border:0; padding:0; cursor:pointer;
+  color:var(--ink-2); font-family:inherit; font-size:inherit; letter-spacing:inherit;
+  transition:color .2s;
+}
+.foot__cookie:hover{color:var(--volt)}
+
+/* ============================================================
+   СТРАНИЦА ПОЛИТИКИ
+   ============================================================ */
+.doc{max-width:74ch; padding-bottom:clamp(64px,9vw,110px)}
+.doc h2{font-size:clamp(21px,2.2vw,27px); margin:44px 0 14px}
+.doc h2:first-of-type{margin-top:34px}
+.doc p{color:var(--ink-2); font-size:15.5px; line-height:1.7; margin-bottom:14px}
+.doc ul{color:var(--ink-2); font-size:15.5px; line-height:1.7; margin:0 0 14px; padding-left:20px}
+.doc li{margin-bottom:7px}
+.doc li::marker{color:var(--volt)}
+.doc a{color:var(--ink); text-decoration:underline; text-underline-offset:2px}
+.doc a:hover{color:var(--volt)}
+.doc__note{
+  background:var(--ground-2); border-left:2px solid var(--volt); border-radius:0 var(--r-sm) var(--r-sm) 0;
+  padding:16px 20px; margin-bottom:8px; color:var(--ink-2); font-size:14.5px; line-height:1.6;
+}
+.doc__tbl{width:100%; border-collapse:collapse; font-size:14.5px; margin-bottom:16px}
+.doc__tbl th{
+  text-align:left; padding:10px 14px 10px 0; color:var(--ink-3); font-weight:400;
+  border-bottom:1px solid var(--line); vertical-align:top; width:34%;
+}
+.doc__tbl td{padding:10px 0; border-bottom:1px solid var(--line-soft); line-height:1.6}
+
+/* ============================================================
+   СТРАНИЦА 404
+   ============================================================ */
+.oops{padding:clamp(60px,10vw,120px) 0 clamp(70px,10vw,130px)}
+.oops__in{max-width:56ch}
+.oops__art{width:min(100%,260px); height:auto; margin-bottom:34px; overflow:visible}
+.oops__spark{animation:oopsFlick 3.2s steps(1,end) infinite}
+@keyframes oopsFlick{0%,72%,100%{opacity:0} 76%{opacity:.9} 80%{opacity:.2} 84%{opacity:1} 90%{opacity:0}}
+.oops h1{font-size:clamp(32px,5vw,62px); line-height:1.02; letter-spacing:-.035em}
+.oops .lead{margin-bottom:30px}
+.oops__links{
+  list-style:none; margin:38px 0 0; padding:30px 0 0; border-top:1px solid var(--line);
+  display:flex; flex-direction:column; gap:13px; font-size:15.5px;
+}
+.oops__links a{color:var(--ink-2); text-decoration:none; display:inline-flex; align-items:center; gap:10px; transition:color .2s}
+.oops__links a::before{content:'→'; color:var(--volt); font-family:var(--f-mono); font-size:13px}
+.oops__links a:hover{color:var(--volt)}
+
+/* ============================================================
+   СОРТИРОВКА И СЧЁТЧИК В КАТАЛОГЕ
+   ============================================================ */
+.tools__row{display:flex; gap:14px; align-items:center; flex-wrap:wrap}
+.sort{display:flex; align-items:center; gap:10px}
+.sort label{font-family:var(--f-body); font-size:14px; color:var(--ink-3); white-space:nowrap}
+.sort select{
+  background:var(--ground); border:1px solid var(--line); color:var(--ink);
+  padding:9px 12px; border-radius:var(--r-sm); font-family:var(--f-body); font-size:14px; cursor:pointer;
+}
+.sort select:focus{border-color:var(--volt); outline:none}
+.found{
+  font-family:var(--f-mono); font-size:12.5px; color:var(--ink-3);
+  font-variant-numeric:tabular-nums; margin-left:auto; white-space:nowrap;
+}
+.found b{color:var(--volt); font-weight:500}
+
+/* ============================================================
+   РАССРОЧКА
+   ============================================================ */
+.instal{
+  font-family:var(--f-body); font-size:13px; color:var(--ink-3);
+  display:flex; align-items:baseline; gap:6px; flex-wrap:wrap;
+}
+.instal b{
+  font-family:var(--f-mono); font-size:13.5px; color:var(--ink-2);
+  font-weight:500; font-variant-numeric:tabular-nums;
+}
+.instal--big{font-size:14.5px; margin-top:-6px}
+.instal--big b{font-size:15.5px; color:var(--ink)}
+
+/* ============================================================
+   СРАВНЕНИЕ СБОРОК
+   ============================================================ */
+.card__cmp{
+  display:flex; align-items:center; gap:9px; cursor:pointer; user-select:none;
+  font-size:13px; color:var(--ink-3); padding-top:2px;
+}
+.card__cmp input{
+  appearance:none; -webkit-appearance:none; flex:none; width:17px; height:17px;
+  border:1px solid var(--line); border-radius:4px; background:var(--ground);
+  cursor:pointer; position:relative; transition:.2s;
+}
+.card__cmp:hover input{border-color:var(--ink-3)}
+.card__cmp input:checked{background:var(--volt); border-color:var(--volt)}
+.card__cmp input:checked::after{
+  content:''; position:absolute; left:5px; top:1px; width:5px; height:9px;
+  border:solid #160F04; border-width:0 2px 2px 0; transform:rotate(43deg);
+}
+.card__cmp input:checked ~ span{color:var(--volt)}
+
+.cmpbar{
+  position:fixed; left:0; right:0; bottom:0; z-index:75; padding:14px 16px;
+  background:linear-gradient(180deg, transparent, rgba(10,9,8,.92) 45%);
+  transform:translateY(120%); transition:transform .4s cubic-bezier(.2,.85,.25,1);
+}
+.cmpbar.is-on{transform:none}
+.cmpbar__in{
+  width:min(100% - 8px, var(--shell)); margin-inline:auto;
+  background:var(--ground-2); border:1px solid var(--line); border-radius:var(--r-md);
+  padding:14px 20px; display:flex; gap:18px; align-items:center; flex-wrap:wrap;
+  box-shadow:0 22px 50px -26px rgba(0,0,0,.95);
+}
+.cmpbar__list{display:flex; gap:9px; flex-wrap:wrap; flex:1; min-width:min(100%,240px)}
+.cmpchip{
+  display:inline-flex; align-items:center; gap:8px; padding:6px 8px 6px 13px;
+  background:var(--ground-3); border:1px solid var(--line); border-radius:100px;
+  font-family:var(--f-disp); font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:-.02em;
+}
+.cmpchip button{
+  appearance:none; background:transparent; border:0; cursor:pointer; color:var(--ink-3);
+  font-size:15px; line-height:1; padding:0 3px; transition:color .2s;
+}
+.cmpchip button:hover{color:#FF6B4A}
+.cmpbar__hint{font-size:13.5px; color:var(--ink-3)}
+
+.cmp__wrap{overflow-x:auto; margin-top:8px}
+.cmp__tbl{border-collapse:collapse; width:100%; min-width:520px; font-size:14.5px}
+.cmp__tbl th, .cmp__tbl td{
+  padding:13px 16px; border-bottom:1px solid var(--line-soft); text-align:left; vertical-align:top;
+}
+.cmp__tbl thead th{
+  border-bottom:1px solid var(--line); vertical-align:bottom;
+  font-family:var(--f-disp); font-weight:800; text-transform:uppercase; letter-spacing:-.03em;
+  font-size:19px; color:var(--ink);
+}
+.cmp__tbl thead th:first-child{font-family:var(--f-body); font-size:13px; font-weight:400; color:var(--ink-3); text-transform:none; letter-spacing:0}
+.cmp__tbl tbody th{font-family:var(--f-body); font-weight:400; color:var(--ink-3); font-size:13.5px; width:26%}
+.cmp__tbl td{color:var(--ink); font-weight:500}
+.cmp__tbl tr.is-diff td{color:var(--volt)}
+.cmp__tbl .cmp__price{font-family:var(--f-disp); font-size:21px; font-weight:800; letter-spacing:-.035em; font-variant-numeric:tabular-nums}
+.cmp__legend{font-size:13.5px; color:var(--ink-3); margin-top:16px; display:flex; align-items:center; gap:9px}
+.cmp__legend i{width:11px; height:2px; background:var(--volt); flex:none; border-radius:2px}
+
+/* ============================================================
+   ФОТО ТОВАРА ВМЕСТО ВЕКТОРА
+   Достаточно положить <img class="shot"> внутрь .card__art —
+   соотношение сторон задано, страница не прыгает при загрузке.
+   ============================================================ */
+.shot{
+  width:100%; height:100%; object-fit:contain; display:block;
+  aspect-ratio:4 / 5; background:var(--ground-3); border-radius:var(--r-sm);
+}
+.card__art:has(.shot){padding:18px 18px 12px; min-height:0}
+.card__art:has(.shot) > svg:not(.zap){display:none}
+.form-error{color:#FF8360; font-size:13.5px; line-height:1.5; margin-top:-4px}
+
+/* ============================================================
+   СТРАНИЦА ОТДЕЛЬНОЙ СБОРКИ
+   ============================================================ */
+.buildpg{display:grid; grid-template-columns:.85fr 1.15fr; gap:clamp(28px,4vw,64px); align-items:center}
+@media (max-width:860px){ .buildpg{grid-template-columns:1fr; gap:28px} }
+.buildpg__art{
+  display:grid; place-items:center; padding:clamp(20px,3vw,40px);
+  background:radial-gradient(58% 55% at 50% 58%, rgba(255,154,31,.10), transparent 72%);
+}
+.buildpg__art svg{width:auto; height:min(52vh,400px); overflow:visible}
+.buildpg__info h1{font-size:clamp(34px,5vw,64px); text-transform:uppercase; letter-spacing:-.04em; margin-top:6px}
+.buildpg__gua{
+  list-style:none; margin:30px 0 0; padding:26px 0 0; border-top:1px solid var(--line);
+  display:flex; flex-direction:column; gap:12px; font-size:14.5px; color:var(--ink-2);
+}
+.buildpg__gua li{display:grid; grid-template-columns:auto 1fr; gap:11px}
+.buildpg__gua li::before{content:''; width:6px; height:6px; border-radius:50%; background:var(--volt); margin-top:8px}
+
+.buildpg__cols{
+  display:grid; grid-template-columns:1fr 1fr; gap:clamp(28px,4vw,60px);
+  margin-top:clamp(44px,6vw,76px); padding-top:clamp(34px,4vw,50px); border-top:1px solid var(--line);
+}
+@media (max-width:860px){ .buildpg__cols{grid-template-columns:1fr; gap:34px} }
+.card--link{text-decoration:none; color:inherit}
+.card--link .card__body{padding-bottom:22px}
+a.card__name{display:block; text-decoration:none; color:inherit; transition:color .2s}
+a.card__name:hover{color:var(--volt)}

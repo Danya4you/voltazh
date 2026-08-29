@@ -1,0 +1,408 @@
+<title>Дорожная карта Вольтажа</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Onest:wght@400;500;600;700&family=Unbounded:wght@600;700;800&display=swap">
+
+<style>
+:root{
+  --ground:#12100E; --surface:#1A1714; --surface-2:#221E19;
+  --line:#2F2921; --line-soft:#241F1A;
+  --ink:#F3EEE6; --ink-2:#C4B9AB; --ink-3:#8A7F72;
+  --volt:#FF9A1F; --arc:#8FE3FF;
+  --hole:#FF8360; --need:#FFC64D; --plus:#6FD68F;
+  --f-disp:'Unbounded','Onest',system-ui,sans-serif;
+  --f-body:'Onest','Segoe UI',system-ui,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:16px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{width:min(100% - 40px, 940px); margin-inline:auto; padding:clamp(38px,6vw,72px) 0 clamp(60px,8vw,100px)}
+
+h1,h2,h3{font-family:var(--f-disp); margin:0; letter-spacing:-.03em; line-height:1.08; text-wrap:balance}
+h1{font-size:clamp(28px,4.4vw,46px); font-weight:800}
+h2{font-size:clamp(20px,2.4vw,26px); font-weight:700}
+h3{font-size:17px; font-weight:600; letter-spacing:-.022em; line-height:1.3}
+p{margin:0}
+a{color:var(--ink); text-underline-offset:2px}
+a:hover{color:var(--volt)}
+
+.eyebrow{
+  font-family:var(--f-mono); font-size:11px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--volt); display:flex; align-items:center; gap:11px; margin-bottom:16px;
+}
+.eyebrow::before{content:''; width:24px; height:1px; background:var(--volt)}
+.lede{color:var(--ink-2); font-size:17px; max-width:62ch; margin-top:18px}
+
+/* состояние на сегодня */
+.state{
+  display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--line-soft);
+  border:1px solid var(--line-soft); border-radius:6px; overflow:hidden; margin:38px 0 8px;
+}
+@media (max-width:640px){ .state{grid-template-columns:1fr} }
+.state__col{background:var(--surface); padding:20px 22px}
+.state__h{
+  font-family:var(--f-mono); font-size:10.5px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:13px;
+}
+.state ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; font-size:14.5px}
+.state li{display:flex; gap:9px; align-items:flex-start; color:var(--ink-2)}
+.state li::before{content:'—'; color:var(--ink-3); flex:none}
+.state--gap li::before{content:'—'; color:var(--hole)}
+
+/* этапы */
+.stage{margin-top:clamp(44px,5.5vw,68px)}
+.stage__top{display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; margin-bottom:6px}
+.stage__n{
+  font-family:var(--f-mono); font-size:12px; letter-spacing:.16em; color:var(--volt); flex:none;
+}
+.stage__note{color:var(--ink-3); font-size:14.5px; max-width:60ch; margin-bottom:20px}
+
+/* строки задач: плотный список, разделённый волосяными линиями */
+.rows{border-top:1px solid var(--line)}
+.row{
+  display:grid; grid-template-columns:132px 1fr; gap:24px;
+  padding:20px 0; border-bottom:1px solid var(--line-soft);
+}
+@media (max-width:640px){ .row{grid-template-columns:1fr; gap:10px} }
+.row__meta{display:flex; flex-direction:column; gap:8px; align-items:flex-start}
+@media (max-width:640px){ .row__meta{flex-direction:row; align-items:center; gap:12px} }
+.tag{
+  font-family:var(--f-mono); font-size:10px; letter-spacing:.13em; text-transform:uppercase;
+  padding:4px 9px; border-radius:100px; white-space:nowrap; font-weight:500;
+}
+.tag--hole{background:rgba(255,131,96,.14); color:#FFB9A6}
+.tag--need{background:rgba(255,198,77,.13); color:#FFDF9E}
+.tag--plus{background:rgba(111,214,143,.13); color:#B4E8C6}
+.tag--goal{background:rgba(143,227,255,.12); color:#B9EEFF}
+.row__time{font-family:var(--f-mono); font-size:11.5px; color:var(--ink-3); white-space:nowrap}
+.row__why{color:var(--ink-2); font-size:15px; margin-top:7px; max-width:64ch}
+.row__why code{
+  font-family:var(--f-mono); font-size:13px; background:var(--surface-2);
+  padding:1px 6px; border-radius:3px; color:var(--ink);
+}
+.row--first{border-top:0}
+
+/* блок «не надо» */
+.skip{
+  margin-top:clamp(44px,5.5vw,68px); background:var(--surface);
+  border:1px solid var(--line); border-radius:6px; padding:clamp(22px,3vw,30px);
+}
+.skip ul{list-style:none; margin:16px 0 0; padding:0; display:flex; flex-direction:column; gap:12px}
+.skip li{display:grid; grid-template-columns:auto 1fr; gap:11px; font-size:15px; color:var(--ink-2)}
+.skip li b{color:var(--ink); font-weight:600}
+.skip li::before{content:'✕'; color:var(--hole); font-size:13px; line-height:1.7}
+
+/* итог */
+.done{margin-top:clamp(44px,5.5vw,68px); border-top:2px solid var(--volt); padding-top:26px}
+.done ol{margin:18px 0 0; padding-left:22px; display:flex; flex-direction:column; gap:11px; color:var(--ink-2); font-size:15.5px}
+.done li::marker{color:var(--volt); font-family:var(--f-mono); font-size:13px}
+.sum{
+  display:flex; gap:26px; flex-wrap:wrap; margin-top:26px; padding-top:22px;
+  border-top:1px solid var(--line-soft);
+}
+.sum div{display:flex; flex-direction:column; gap:3px}
+.sum dt{font-family:var(--f-mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3)}
+.sum dd{margin:0; font-family:var(--f-disp); font-size:24px; font-weight:800; letter-spacing:-.035em; color:var(--volt)}
+.sum dd small{font-size:13px; color:var(--ink-2); font-weight:400; font-family:var(--f-body); letter-spacing:0}
+</style>
+
+<div class="wrap">
+
+  <div class="eyebrow">Портфолио · план работ</div>
+  <h1>Что осталось сделать<br>с «Вольтажом»</h1>
+  <p class="lede">Сайт уже работает и выглядит как готовый проект. Ниже — то, что отделяет
+  «красиво сверстано» от «можно показывать заказчику»: сначала дыры, которые заметят сразу,
+  потом содержательные добавления, потом упаковка кейса. Оценки — в часах спокойной работы.</p>
+
+  <div class="state">
+    <div class="state__col">
+      <div class="state__h">Уже есть</div>
+      <ul>
+        <li>4 страницы: главная, каталог, конфигуратор, политика</li>
+        <li>Корзина с сохранением между страницами, свои сборки из конфигуратора</li>
+        <li>Конфигуратор с 7 правилами совместимости и починкой в одно нажатие</li>
+        <li>Формы с валидацией и обязательным согласием, баннер cookie</li>
+        <li>Своя типографика, сценарная анимация, плавная прокрутка</li>
+        <li>Общие ресурсы и сборка одним файлом для Тильды</li>
+      </ul>
+    </div>
+    <div class="state__col">
+      <div class="state__h">Проверено — нет</div>
+      <ul class="state--gap">
+        <li>Меню на мобильных: ниже 900px навигация просто скрыта</li>
+        <li>Мета-теги Open Graph, favicon, canonical — ни одного</li>
+        <li>Микроразметка Schema.org — ни строки</li>
+        <li>Страницы 404, robots.txt, sitemap.xml</li>
+        <li>Репозитория git и живой ссылки</li>
+        <li>Отдельных страниц у товаров — только модалка</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ЭТАП 1 -->
+  <section class="stage">
+    <div class="stage__top"><span class="stage__n">ЭТАП 1</span><h2>Закрыть дыры</h2></div>
+    <p class="stage__note">Это не улучшения, а недоделки. Пока они есть, остальное обсуждать рано:
+    ревьюер натыкается на них в первые полминуты.</p>
+
+    <div class="rows">
+      <div class="row row--first">
+        <div class="row__meta"><span class="tag tag--hole">Критично</span><span class="row__time">~2 ч</span></div>
+        <div>
+          <h3>Бургер-меню на мобильных</h3>
+          <p class="row__why">В <code>style.css:225</code> навигация скрывается на экранах уже 900px,
+          и заменить её нечем. С телефона из шапки нельзя попасть ни в каталог, ни в конфигуратор —
+          только листать главную и надеяться на ссылку в тексте. Сайт откроют с телефона первым делом.</p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="row__meta"><span class="tag tag--hole">Критично</span><span class="row__time">~1,5 ч</span></div>
+        <div>
+          <h3>Мета-теги и превью ссылки</h3>
+          <p class="row__why">Сейчас нет ни Open Graph, ни favicon, ни canonical. Ссылка на сайт
+          в телеграме или в отклике развернётся голым адресом без картинки и описания — а это
+          буквально первое, что увидит человек, которому вы её отправите. Нужна картинка 1200×630
+          с логотипом и корпусом, описание для каждой из четырёх страниц, иконка вкладки.</p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="row__meta"><span class="tag tag--need">Нужно</span><span class="row__time">~40 мин</span></div>
+        <div>
+          <h3>Страница 404</h3>
+          <p class="row__why">Мелочь, по которой судят о доведённости. В стиле сайта: разряд,
+          короткая фраза вроде «Здесь обрыв цепи» и ссылки в каталог и на главную.</p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="row__meta"><span class="tag tag--need">Нужно</span><span class="row__time">~20 мин</span></div>
+        <div>
+          <h3>robots.txt и sitemap.xml</h3>
+          <p class="row__why">Два маленьких файла, отсутствие которых сразу читается как
+          «сайт не доделывали». Заодно понадобятся, когда выложите на хостинг.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ЭТАП 2 -->
+  <section class="stage">
+    <div class="stage__top"><span class="stage__n">ЭТАП 2</span><h2>Сделать похожим на настоящий магазин</h2></div>
+    <p class="stage__note">Отличает «сверстал красиво» от «понимает, как устроен интернет-магазин».
+    Именно об этом спрашивают на собеседовании, глядя на проект.</p>
+
+    <div class="rows">
+      <div class="row row--first">
+        <div class="row__meta"><span class="tag tag--need">Нужно</span><span class="row__time">~3 ч</span></div>
+        <div>
+          <h3>Микроразметка Schema.org</h3>
+          <p class="row__why">Product и Offer на карточках сборок, Organization, BreadcrumbList
+          на хлебных крошках, FAQPage на блоке вопросов. Проверяется валидаторами Яндекса и Google —
+          скриншот зелёной проверки отлично ложится в кейс. Данные уже лежат структурировано
+          в <code>data.js</code>, так что разметка генерируется тем же кодом, что и карточки.</p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="row__meta"><span class="tag tag--need">Нужно</span><span class="row__time">~4 ч</span></div>
+        <div>
+          <h3>Отдельная страница у каждой сборки</h3>
+          <p class="row__why">Сейчас карточка товара — модалка: её нельзя отправить ссылкой,
+          её не видит поиск, при обновлении она закрывается. Шесть страниц вида
+          <code>build-groza.html</code> либо одна с параметром. Модалку оставить как быстрый
+          просмотр из каталога — это правильный паттерн, а не замена странице.</p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="row__meta"><span class="tag tag--need">Нужно</span><span class="row__time">~3 ч</span></div>
+        <div>
+          <h3>Доступность до конца</h3>
+          <p class="row__why">Половина уже есть: подписи для скринридера, видимый фокус,
+          уважение к отключённой анимации. Не хватает удержания фокуса внутри открытой корзины
+          и модалки, возврата фокуса на кнопку при закрытии, живого объявления счётчика корзины.
+          После этого в кейсе можно честно написать «полностью управляется с клавиатуры» —
+          такое пишут единицы.</p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="row__meta"><span class="tag tag--need">Нужно</span><span class="row__time">~2 ч</span></div>
+        <div>
+          <h3>Живая отправка форм</h3>
+          <p class="row__why">Заказ и вопрос показывают экран благодарности и никуда не уходят.
+          Для витрины допустимо, но заявка, реально прилетевшая в телеграм, — совсем другой
+          разговор с заказчиком. У вас уже есть опыт с ботами, так что это ближайший путь;
+          альтернатива без кода — Formspree.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ЭТАП 3 -->
+  <section class="stage">
+    <div class="stage__top"><span class="stage__n">ЭТАП 3</span><h2>Функции, которых ждут от магазина техники</h2></div>
+    <p class="stage__note">Здесь уже не про «правильно», а про «убедительно». Брать по одной,
+    начиная с верхней: каждая самостоятельно смотрится в кейсе.</p>
+
+    <div class="rows">
+      <div class="row row--first">
+        <div class="row__meta"><span class="tag tag--plus">Усилит</span><span class="row__time">~4 ч</span></div>
+        <div>
+          <h3>Сравнение сборок</h3>
+          <p class="row__why">Отметить две-три и увидеть характеристики рядом, с подсветкой различий.
+          Для магазина техники это ожидаемая функция, а для портфолио — хороший показ работы
+          с состоянием и таблицами. Данные для сравнения уже есть в <code>full</code> у каждой сборки.</p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="row__meta"><span class="tag tag--plus">Усилит</span><span class="row__time">~2 ч</span></div>
+        <div>
+          <h3>Реальные фото хотя бы двух сборок</h3>
+          <p class="row__why">Векторные корпуса — осознанное решение, и его стоит защищать в кейсе.
+          Но заказчик спросит, заработает ли вёрстка с настоящими снимками. Ответ должен быть
+          показан, а не рассказан: две карточки с фото, <code>srcset</code>, отложенная загрузка,
+          заданное соотношение сторон, чтобы страница не прыгала при подгрузке.</p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="row__meta"><span class="tag tag--plus">Усилит</span><span class="row__time">~1,5 ч</span></div>
+        <div>
+          <h3>Сортировка и счётчик в каталоге</h3>
+          <p class="row__why">Фильтры есть, сортировки нет. По цене и по мощности, плюс строка
+          «показано 4 из 6» — мелочь, которой не хватает глазу при работе с фильтром.</p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="row__meta"><span class="tag tag--plus">Усилит</span><span class="row__time">~1,5 ч</span></div>
+        <div>
+          <h3>Калькулятор рассрочки</h3>
+          <p class="row__why">Рассрочка 0-0-12 уже упомянута в вопросах. Показать платёж в месяц
+          прямо в карточке и в корзине — маленький элемент, который заметно повышает доверие
+          к странице товара.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ЭТАП 4 -->
+  <section class="stage">
+    <div class="stage__top"><span class="stage__n">ЭТАП 4</span><h2>Упаковать как кейс</h2></div>
+    <p class="stage__note">Самая недооценённая часть. Хороший сайт без упаковки проигрывает
+    среднему сайту с внятным рассказом — потому что второй понятно, как оценивать.</p>
+
+    <div class="rows">
+      <div class="row row--first">
+        <div class="row__meta"><span class="tag tag--hole">Критично</span><span class="row__time">~30 мин</span></div>
+        <div>
+          <h3>Положить в git</h3>
+          <p class="row__why">Папка не под контролем версий. История коммитов — это доказательство,
+          что вы делали работу постепенно и осмысленно, а не скачали шаблон. Смотрят почти всегда.
+          Начать никогда не поздно, но чем раньше, тем правдоподобнее история.</p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="row__meta"><span class="tag tag--hole">Критично</span><span class="row__time">~1 ч</span></div>
+        <div>
+          <h3>Живая ссылка</h3>
+          <p class="row__why">GitHub Pages или Netlify — бесплатно, из репозитория, за десять минут.
+          Адрес вида <code>voltazh.netlify.app</code> в резюме работает; «пришлю архив» —
+          не работает никогда.</p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="row__meta"><span class="tag tag--need">Нужно</span><span class="row__time">~2 ч</span></div>
+        <div>
+          <h3>README как кейс, а не как инструкция</h3>
+          <p class="row__why">Нынешний README технический — он для вас. Нужна вторая часть, для
+          читателя со стороны: какая была задача, какие ограничения, почему выбраны такие решения
+          (почему вектор вместо фото, почему без фреймворка, как устроена проверка совместимости),
+          два-три скриншота и абзац «что бы сделал иначе». Последнее производит впечатление
+          сильнее, чем список технологий.</p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="row__meta"><span class="tag tag--plus">Усилит</span><span class="row__time">~1 ч</span></div>
+        <div>
+          <h3>Прогон Lighthouse и цифры в кейсе</h3>
+          <p class="row__why">Четыре оценки: производительность, доступность, лучшие практики, SEO.
+          Числа убедительнее прилагательных. Заодно честно покажет, во что обходятся четыре
+          шрифтовых семейства и не пора ли подгружать часть начертаний позже.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ЭТАП 5 -->
+  <section class="stage">
+    <div class="stage__top"><span class="stage__n">ЭТАП 5</span><h2>Ваша исходная цель: WordPress и Тильда</h2></div>
+    <p class="stage__note">Ради этого всё и писалось без фреймворков. Делать после того, как
+    основная версия доведена: переносить недоделанное — двойная работа.</p>
+
+    <div class="rows">
+      <div class="row row--first">
+        <div class="row__meta"><span class="tag tag--goal">Цель</span><span class="row__time">~1 день</span></div>
+        <div>
+          <h3>Версия на Тильде</h3>
+          <p class="row__why">Шапка и подвал штатными блоками, герой и текстовые секции Zero-блоками,
+          каталог с корзиной и конфигуратор — блоком T123 из готовых однофайловых сборок в
+          <code>dist/</code>. Порядок разбора уже описан в README.</p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="row__meta"><span class="tag tag--goal">Цель</span><span class="row__time">~2–3 дня</span></div>
+        <div>
+          <h3>Версия на WordPress</h3>
+          <p class="row__why">Тип записи «Сборка» с полями ACF, <code>cardHTML()</code> превращается
+          в шаблон карточки, секции — в паттерны. Справочник комплектующих для конфигуратора
+          удобнее оставить файлом: это статичные данные, база им не нужна. Даёт третий проект
+          в портфолио из той же работы — и показывает, что вы умеете переносить, а не только верстать.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- НЕ НАДО -->
+  <div class="skip">
+    <h2>Чего добавлять не надо</h2>
+    <ul>
+      <li><span><b>Блог и статьи.</b> Раздувают объём работы и ничего не добавляют к оценке вёрстки. Если очень хочется показать работу с контентом — сделайте это в WordPress-версии, там это уместно.</span></li>
+      <li><span><b>Прелоадер с процентами.</b> Читается как «мне нечего показать, подождите». Плавное появление страницы уже есть, этого достаточно.</span></li>
+      <li><span><b>Онлайн-чат и всплывающие «оставьте заявку».</b> На реальном магазине спорно, в портфолио — раздражает того, кто пришёл смотреть вашу работу.</span></li>
+      <li><span><b>Ещё анимации.</b> Её ровно столько, сколько нужно. Следующая уже начнёт мешать, а «слишком много эффектов» — частый упрёк к джуниорским работам.</span></li>
+      <li><span><b>Мультиязычность.</b> Только если целитесь в зарубежный рынок. Иначе это две недели на то, чего никто не откроет.</span></li>
+    </ul>
+  </div>
+
+  <!-- ГОТОВНОСТЬ -->
+  <div class="done">
+    <h2>Когда проект можно показывать</h2>
+    <ol>
+      <li>Открывается с телефона и полностью работает: меню, каталог, корзина, конфигуратор.</li>
+      <li>Ссылка живая, разворачивается в мессенджере картинкой и описанием.</li>
+      <li>Лежит в репозитории с внятной историей коммитов.</li>
+      <li>README отвечает не только «как запустить», но и «почему так сделано».</li>
+      <li>Lighthouse прогнан, цифры не стыдно показать.</li>
+    </ol>
+
+    <div class="sum">
+      <div><dt>Этапы 1 и 4 — минимум</dt><dd>~9 <small>часов</small></dd></div>
+      <div><dt>Плюс этап 2</dt><dd>~21 <small>час</small></dd></div>
+      <div><dt>Всё, кроме переносов</dt><dd>~30 <small>часов</small></dd></div>
+    </div>
+  </div>
+
+</div>
