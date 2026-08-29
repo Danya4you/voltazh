@@ -12,6 +12,7 @@ A_INDEX="https://claude.ai/code/artifact/9986d560-bc45-4273-9dfd-bfeb27bdb34b"
 A_CATALOG="https://claude.ai/code/artifact/6f56c462-fad8-4d6c-8e8c-4a4a90ff387a"
 A_CONFIG="https://claude.ai/code/artifact/f5af7b14-e6db-401b-bb6f-8c973b04b35e"
 A_POLICY="https://claude.ai/code/artifact/4a46e137-725b-4a48-abe8-b0d1a1e88bbd"
+A_BUILD="https://claude.ai/code/artifact/476a7e47-d36b-4c51-885a-01f7cc8ea01e"
 
 set -e
 cd "$(dirname "$0")"
@@ -51,7 +52,9 @@ if [ "$1" = "artifact" ]; then
         -e "s|href=\"catalog\.html|href=\"$A_CATALOG|g" \
         -e "s|href=\"configurator\.html|href=\"$A_CONFIG|g" \
         -e "s|href=\"policy\.html|href=\"$A_POLICY|g" \
+        -e "s|href=\"build\.html|href=\"$A_BUILD|g" \
         -e "s|'catalog\.html'|'$A_CATALOG'|g" \
+        -e "s|build\.html?id=|$A_BUILD?id=|g" \
         "dist/$p" > "dist/_a-$p"
   done
   sed -i '1s|.*|<title>Вольтаж</title>|'               dist/_a-index.html
