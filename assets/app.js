@@ -116,8 +116,13 @@ function zapSVG(color){
   </svg>`;
 }
 function fan(cx, cy, r, color, cls){
-  return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#171410" stroke="${color}" stroke-opacity=".38" stroke-width="1.1"/>` +
-    `<g class="${cls}">` +
+  // Кольцо лежит внутри вращаемой группы намеренно. Вращение идёт вокруг
+  // центра габаритной рамки группы: если оставить в ней одни лопасти,
+  // рамка окажется смещённой вверх (лучи идут вверх и вниз-вбок неравномерно),
+  // и вентилятор будет вращаться не вокруг своего центра. Круг задаёт
+  // рамке правильный центр, а его собственное вращение незаметно.
+  return `<g class="${cls}">` +
+    `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#171410" stroke="${color}" stroke-opacity=".38" stroke-width="1.1"/>` +
     `<path d="M${cx} ${cy} L${cx} ${cy-r*.82} M${cx} ${cy} L${cx+r*.71} ${cy+r*.48} M${cx} ${cy} L${cx-r*.71} ${cy+r*.48}" ` +
     `stroke="${color}" stroke-width="${Math.max(r*.26,2)}" stroke-linecap="round" opacity=".88"/></g>` +
     `<circle cx="${cx}" cy="${cy}" r="${Math.max(r*.22,1.6)}" fill="#2A241D" stroke="#4A4034" stroke-width=".7"/>`;
@@ -619,20 +624,19 @@ const top = document.getElementById('top');
 const railRead = document.getElementById('railRead');
 const rail = document.getElementById('rail');
 
-/* Деления рейки строятся по реальным секциям страницы, поэтому рейка
-   живёт только на главной: на каталоге и в конфигураторе этих секций нет
-   и деления схлопнулись бы в одну точку. */
-const MARKS = [
-  ['#hero', '0 V'], ['#catalog', '220 V'], ['#why', '380 V'],
-  ['#how', '660 V'], ['#faq', '1000 V']
-];
+/* Рейка — это шкала вольтметра, а не оглавление. Деления стоят там, где
+   им положено по своему же номиналу: 220 V на 22 % шкалы и так далее.
+   Раньше они привязывались к позициям секций, и метка «1000 V» оказывалась
+   на 82 % высоты — бегунок при 822 V вставал вплотную к ней, хотя до
+   конца шкалы было ещё далеко. */
+const MARKS = [[0, '0 V'], [22, '220 V'], [38, '380 V'], [66, '660 V'], [100, '1000 V']];
 if(rail){
   const track = rail.querySelector('.rail__track');
-  MARKS.forEach(([sel, label]) => {
-    if(!document.querySelector(sel)) return;
+  MARKS.forEach(([pct, label]) => {
     const el = document.createElement('div');
     el.className = 'rail__tick';
-    el.dataset.sel = sel;
+    el.style.top = pct + '%';
+    el.dataset.pct = pct;
     el.innerHTML = `<i></i><span>${label}</span>`;
     track.appendChild(el);
   });
@@ -644,22 +648,6 @@ function measure(){
   docH = document.body.scrollHeight - innerHeight;
 }
 
-/* Рейка появляется только от 1320px. На узких экранах её незачем
-   раскладывать: чтение offsetTop у секций форсирует пересчёт раскладки
-   ради элемента, которого не видно. */
-function layoutTicks(){
-  if(!rail || innerWidth < 1320) return;
-  const ticks = [...rail.querySelectorAll('.rail__tick')];
-  // сначала все чтения, потом все записи: если чередовать их в цикле,
-  // браузер пересчитывает раскладку на каждой итерации
-  const tops = ticks.map(t => {
-    const sec = document.querySelector(t.dataset.sel);
-    return sec ? Math.min(1, Math.max(0, sec.offsetTop / (docH || 1))) : null;
-  });
-  ticks.forEach((t, i) => {
-    if(tops[i] !== null) t.style.top = (tops[i] * 100) + '%';
-  });
-}
 
 let ticking = false;
 function onScroll(){
@@ -669,7 +657,7 @@ function onScroll(){
   if(rail){
     railRead.textContent = Math.round(p * 1000) + ' V';
     rail.querySelectorAll('.rail__tick').forEach(t => {
-      t.classList.toggle('on', parseFloat(t.style.top) / 100 <= p + .002);
+      t.classList.toggle('on', +t.dataset.pct / 100 <= p + .002);
     });
   }
   ticking = false;
@@ -677,9 +665,9 @@ function onScroll(){
 addEventListener('scroll', () => {
   if(!ticking){ ticking = true; requestAnimationFrame(onScroll); }
 }, { passive: true });
-addEventListener("resize", () => { measure(); layoutTicks(); onScroll(); });
+addEventListener("resize", () => { measure(); onScroll(); });
 /* первый замер — после первой отрисовки, чтобы не задерживать её */
-requestAnimationFrame(() => { measure(); layoutTicks(); onScroll(); });
+requestAnimationFrame(() => { measure(); onScroll(); });
 
 /* ============================================================
    ПЛАВНАЯ ПРОКРУТКА
