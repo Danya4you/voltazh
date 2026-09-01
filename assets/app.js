@@ -14,6 +14,15 @@ const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 /* единый формат цены: неразрывные пробелы и рубль */
 const rub = n => n.toLocaleString('ru-RU') + ' ₽';
 
+/* русский счёт: 1 сборка, 2 сборки, 5 сборок (и 11-14 — тоже «сборок») */
+const plural = (n, one, few, many) => {
+  const t = n % 100, u = n % 10;
+  if(t >= 11 && t <= 14) return many;
+  if(u === 1) return one;
+  if(u >= 2 && u <= 4) return few;
+  return many;
+};
+
 /* высота прокручиваемой части документа; обновляется в measure() */
 let docH = 0;
 
@@ -179,7 +188,7 @@ if(grid){
 
 /* фильтры + бюджет — есть только на странице каталога */
 let activeCat = 'all';
-let maxBudget = 700000;
+let maxBudget = 900000;
 const budget = document.getElementById('budget');
 const budgetOut = document.getElementById('budgetOut');
 
@@ -225,7 +234,7 @@ function applyFilters(){
   if(found){
     const total = grid.querySelectorAll('.card').length;
     found.innerHTML = shown === total
-      ? `Все <b>${total}</b> сборки`
+      ? `Все <b>${total}</b> ${plural(total, "сборка", "сборки", "сборок")}`
       : `Показано <b>${shown}</b> из ${total}`;
   }
 }
@@ -240,7 +249,7 @@ document.querySelectorAll('.chip').forEach(chip => {
 if(budget){
   budget.addEventListener('input', () => {
     maxBudget = +budget.value;
-    budgetOut.textContent = maxBudget >= 700000 ? 'без лимита' : rub(maxBudget);
+    budgetOut.textContent = maxBudget >= 900000 ? 'без лимита' : rub(maxBudget);
     applyFilters();
   });
   budgetOut.textContent = 'без лимита';

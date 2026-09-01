@@ -9,3 +9,9 @@ desktop.ini
 # временные файлы Office и OneDrive
 ~$*
 *.tmp
+.claude/
+
+# заготовки для фотосъёмки: рабочие материалы, не часть сайта
+_prompts.json
+_makedoc.ps1
+ПРОМТЫ ДЛЯ ФОТО.*
