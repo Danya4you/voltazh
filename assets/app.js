@@ -179,11 +179,15 @@ function cardHTML(b, i){
   </article>`;
 }
 // на главной сетка показывает только выбранные сборки (data-only="id,id"),
-// в каталоге — все шесть
+// в каталоге — все
+let cards = [];
 if(grid){
   const only = (grid.dataset.only || '').split(',').filter(Boolean);
   const list = only.length ? only.map(id => BUILDS.find(b => b.id === id)).filter(Boolean) : BUILDS;
   grid.innerHTML = list.map(cardHTML).join('');
+  // карточки после этого не пересоздаются — фильтр только прячет и гасит,
+  // поэтому список собираем один раз, а не на каждое движение ползунка
+  cards = [...grid.querySelectorAll('.card')];
 }
 
 /* фильтры + бюджет — есть только на странице каталога */
@@ -206,17 +210,17 @@ function applySort(){
   if(!grid || !sortSel) return;
   const cmp = SORTS[sortSel.value];
   const order = cmp ? [...BUILDS].sort(cmp).map(b => b.id) : BUILDS.map(b => b.id);
-  grid.querySelectorAll('.card').forEach(card => {
+  cards.forEach(card => {
     card.style.order = order.indexOf(card.dataset.id);
   });
 }
 
+let lastShown = -1;
 function applyFilters(){
   if(!grid) return;
   let shown = 0;
-  grid.querySelectorAll('.card').forEach(card => {
-    const cats = card.dataset.cats.split(' ');
-    const okCat = activeCat === 'all' || cats.includes(activeCat);
+  cards.forEach(card => {
+    const okCat = activeCat === 'all' || (' ' + card.dataset.cats + ' ').includes(' ' + activeCat + ' ');
     const okPrice = +card.dataset.price <= maxBudget;
     card.classList.toggle('is-hidden', !okCat);
     card.classList.toggle('is-out', okCat && !okPrice);
@@ -231,11 +235,14 @@ function applyFilters(){
   // фильтр меняет высоту страницы, но замер откладываем: иначе чтение
   // идёт сразу после записи классов и форсирует пересчёт раскладки
   requestAnimationFrame(measure);
-  if(found){
-    const total = grid.querySelectorAll('.card').length;
-    found.innerHTML = shown === total
-      ? `Все <b>${total}</b> ${plural(total, "сборка", "сборки", "сборок")}`
-      : `Показано <b>${shown}</b> из ${total}`;
+  // строку счётчика переписываем только когда число и правда изменилось:
+  // при протяжке ползунка она одна и та же десятки кадров подряд, а
+  // присваивание innerHTML каждый раз заново разбирает разметку
+  if(found && shown !== lastShown){
+    lastShown = shown;
+    found.innerHTML = shown === cards.length
+      ? `Все <b>${cards.length}</b> ${plural(cards.length, "сборка", "сборки", "сборок")}`
+      : `Показано <b>${shown}</b> из ${cards.length}`;
   }
 }
 if(sortSel) sortSel.addEventListener('change', applySort);
@@ -247,10 +254,16 @@ document.querySelectorAll('.chip').forEach(chip => {
   });
 });
 if(budget){
+  /* Ползунок шлёт input на каждое движение мыши — до сотни раз в секунду.
+     Перебирать по ним карточки бессмысленно: показать всё равно можно
+     не чаще кадра. Копим последнее значение и разбираем раз в кадр. */
+  let pending = false;
   budget.addEventListener('input', () => {
     maxBudget = +budget.value;
     budgetOut.textContent = maxBudget >= 350000 ? 'без лимита' : rub(maxBudget);
-    applyFilters();
+    if(pending) return;
+    pending = true;
+    requestAnimationFrame(() => { pending = false; applyFilters(); });
   });
   budgetOut.textContent = 'без лимита';
 }
