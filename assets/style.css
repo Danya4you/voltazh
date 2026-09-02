@@ -60,15 +60,31 @@ body{
 
 /* ---------- фон, живущий по скроллу ---------- */
 .bg{position:fixed; inset:0; z-index:0; pointer-events:none}
-.bg__glow{
-  position:absolute; inset:-20%;
-  background:
-    radial-gradient(46vw 46vw at calc(18% + var(--sp)*58%) calc(14% + var(--sp)*24%),
-      rgba(255,154,31, calc(.05 + var(--sp)*.20)), transparent 62%),
-    radial-gradient(38vw 38vw at calc(88% - var(--sp)*62%) calc(78% - var(--sp)*30%),
-      rgba(143,227,255, calc(.03 + var(--sp)*.09)), transparent 60%);
+/* Два световых пятна, которые ползут по мере прокрутки.
+   Раньше и положение, и прозрачность обоих градиентов считались из
+   --sp прямо внутри background. Это значило, что на каждом кадре
+   прокрутки браузер заново растрировал два радиальных градиента
+   размером в полтора экрана и потом размывал их. Со сглаженной
+   прокруткой кадров получается втрое больше обычного, и страница
+   начинала подтормаживать именно здесь.
+   Теперь фон рисуется один раз, а по скроллу едут готовые слои:
+   transform и opacity умеет композитор, перерисовка не нужна. */
+.bg__glow{ position:absolute; inset:-35%; }
+.bg__glow::before,
+.bg__glow::after{
+  content:''; position:absolute; inset:0;
   filter:blur(6px);
-  will-change:background;
+  will-change:transform, opacity;
+}
+.bg__glow::before{
+  background:radial-gradient(46vw 46vw at 34% 26%, #FF9A1F, transparent 62%);
+  opacity:calc(.05 + var(--sp)*.20);
+  transform:translate3d(calc(var(--sp) * 43%), calc(var(--sp) * 18%), 0);
+}
+.bg__glow::after{
+  background:radial-gradient(38vw 38vw at 86% 76%, #8FE3FF, transparent 60%);
+  opacity:calc(.03 + var(--sp)*.09);
+  transform:translate3d(calc(var(--sp) * -46%), calc(var(--sp) * -22%), 0);
 }
 .bg__grid{
   position:absolute; inset:0;

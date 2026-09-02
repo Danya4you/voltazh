@@ -658,14 +658,21 @@ function measure(){
 }
 
 
+/* Деления рейки ищем один раз: querySelectorAll на каждом кадре
+   прокрутки — это обход дерева там, где список никогда не меняется. */
+const ticks = rail ? [...rail.querySelectorAll('.rail__tick')] : [];
+let lastVolt = -1;
+
 let ticking = false;
 function onScroll(){
   const p = docH > 0 ? Math.min(1, Math.max(0, scrollY / docH)) : 0;
   root.style.setProperty('--sp', p.toFixed(4));
   top.classList.toggle('stuck', scrollY > 12);
   if(rail){
-    railRead.textContent = Math.round(p * 1000) + ' V';
-    rail.querySelectorAll('.rail__tick').forEach(t => {
+    // показания меняются раз в несколько кадров — пишем только тогда
+    const volt = Math.round(p * 1000);
+    if(volt !== lastVolt){ railRead.textContent = volt + ' V'; lastVolt = volt; }
+    ticks.forEach(t => {
       t.classList.toggle('on', +t.dataset.pct / 100 <= p + .002);
     });
   }
@@ -675,6 +682,9 @@ addEventListener('scroll', () => {
   if(!ticking){ ticking = true; requestAnimationFrame(onScroll); }
 }, { passive: true });
 addEventListener("resize", () => { measure(); onScroll(); });
+/* шрифты и картинки догружаются после первого кадра и меняют высоту —
+   без этого замера прокрутка упёрлась бы в старую границу */
+addEventListener("load", () => { measure(); onScroll(); });
 /* первый замер — после первой отрисовки, чтобы не задерживать её */
 requestAnimationFrame(() => { measure(); onScroll(); });
 
@@ -688,10 +698,17 @@ requestAnimationFrame(() => { measure(); onScroll(); });
    ============================================================ */
 if(!RM && matchMedia('(pointer:fine)').matches){
   let target = scrollY, cur = target, raf = null, own = false;
-  const limit = () => document.documentElement.scrollHeight - innerHeight;
+  /* высоту берём из measure(), а не читаем scrollHeight на каждом
+     повороте колеса: это чтение заставляет браузер пересчитать
+     раскладку прямо посреди обработчика */
+  const limit = () => docH > 0 ? docH : document.documentElement.scrollHeight - innerHeight;
 
+  /* 0.14 давало хвост примерно в сорок кадров на один щелчок колеса —
+     страница доезжала до места почти секунду, и это читалось не как
+     плавность, а как задержка. 0.24 доводит хвост до полутора десятков
+     кадров: движение всё ещё сглажено, но идёт за рукой. */
   function glide(){
-    cur += (target - cur) * 0.14;
+    cur += (target - cur) * 0.24;
     if(Math.abs(target - cur) < 0.4){ cur = target; raf = null; }
     else raf = requestAnimationFrame(glide);
     // instant обязателен: у html стоит scroll-behavior:smooth для якорей,
