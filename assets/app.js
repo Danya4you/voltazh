@@ -698,6 +698,18 @@ addEventListener("resize", () => { measure(); onScroll(); });
 /* шрифты и картинки догружаются после первого кадра и меняют высоту —
    без этого замера прокрутка упёрлась бы в старую границу */
 addEventListener("load", () => { measure(); onScroll(); });
+/* Карточки с content-visibility до первого показа занимают
+   предсказанную высоту, а отрисовавшись — свою настоящую. Высота
+   документа при этом плывёт, и кэш в docH устаревает: прокрутка
+   упиралась бы в старую границу. Следим за сеткой и перемеряем. */
+if(grid && 'ResizeObserver' in window){
+  let pending = false;
+  new ResizeObserver(() => {
+    if(pending) return;
+    pending = true;
+    requestAnimationFrame(() => { pending = false; measure(); onScroll(); });
+  }).observe(grid);
+}
 /* первый замер — после первой отрисовки, чтобы не задерживать её */
 requestAnimationFrame(() => { measure(); onScroll(); });
 

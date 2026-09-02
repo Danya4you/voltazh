@@ -211,7 +211,12 @@ a{color:inherit}
   background:rgba(18,16,14,.72); backdrop-filter:blur(14px);
   border-bottom:1px solid transparent; transition:border-color .3s, background .3s;
 }
-.top.stuck{border-bottom-color:var(--line); background:rgba(18,16,14,.92)}
+/* Прокрученная шапка залита на 92% — сквозь неё и так ничего не видно,
+   а backdrop-filter при этом заставлял браузер пересобирать и размывать
+   всё, что проезжает под ней, на каждом кадре. В каталоге под шапкой
+   едут десять тяжёлых SVG, и это било больнее всего. Наверху страницы,
+   где заливка 72%, размытие остаётся — там оно и читается. */
+.top.stuck{border-bottom-color:var(--line); background:rgba(18,16,14,.92); backdrop-filter:none}
 .top__in{display:flex; align-items:center; gap:28px; height:70px}
 .logo{display:flex; align-items:center; gap:11px; text-decoration:none; margin-right:auto}
 .logo__mark{width:30px; height:30px; flex:none}
@@ -491,6 +496,14 @@ input[type=range]::-moz-range-thumb{
   background:linear-gradient(180deg,var(--ground-2),var(--ground));
   border:1px solid var(--line); border-radius:var(--r-md); overflow:hidden;
   transition:border-color .3s, transform .3s, box-shadow .35s;
+  /* Каждая карточка — это SVG на полсотни узлов с градиентами и
+     вентиляторами. Десять таких браузер отрисовывал целиком, включая
+     те восемь, что за краем экрана. content-visibility разрешает
+     пропускать их до подхода к экрану; auto 520px — подсказка о высоте,
+     чтобы полоса прокрутки не прыгала, дальше браузер запоминает
+     настоящий размер сам. */
+  content-visibility:auto;
+  contain-intrinsic-size:auto 700px;
 }
 .card::after{
   content:''; position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity .35s;
