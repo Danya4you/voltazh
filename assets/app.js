@@ -188,7 +188,7 @@ if(grid){
 
 /* фильтры + бюджет — есть только на странице каталога */
 let activeCat = 'all';
-let maxBudget = 900000;
+let maxBudget = 350000;
 const budget = document.getElementById('budget');
 const budgetOut = document.getElementById('budgetOut');
 
@@ -249,7 +249,7 @@ document.querySelectorAll('.chip').forEach(chip => {
 if(budget){
   budget.addEventListener('input', () => {
     maxBudget = +budget.value;
-    budgetOut.textContent = maxBudget >= 900000 ? 'без лимита' : rub(maxBudget);
+    budgetOut.textContent = maxBudget >= 350000 ? 'без лимита' : rub(maxBudget);
     applyFilters();
   });
   budgetOut.textContent = 'без лимита';

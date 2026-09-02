@@ -50,6 +50,11 @@ function issues(){
       text:`Процессор ${cpu.name} — сокет ${cpu.socket}, а плата — ${mb.socket}. Вместе они не заработают.`,
       cat:'mb', pick: cheapest('mb', o => o.socket === cpu.socket) });
   }
+  if(chosen('ram').mem !== mb.mem){
+    out.push({ level:'error',
+      text:`Плата «${mb.name}» работает с ${mb.mem}, а выбрана память ${chosen('ram').mem}. Модули просто не встанут в слоты.`,
+      cat:'ram', pick: cheapest('ram', o => o.mem === mb.mem && o.gb >= chosen('ram').gb) });
+  }
   if(!pc.forms.includes(mb.form)){
     out.push({ level:'error',
       text:`Плата формата ${mb.form} не встанет в корпус «${pc.name}».`,
@@ -85,10 +90,11 @@ function issues(){
       text:`Запаса маловато. Под ${draw()} Вт нагрузки советуем блок от ${need} Вт — тише и живёт дольше.`,
       cat:'psu', pick: cheapest('psu', o => o.watt >= need) });
   }
-  if(chosen('ram').price <= 5900 && gpu.price >= 69900){
+  const ram = chosen('ram');
+  if(ram.gb <= 16 && gpu.price >= 58000){
     out.push({ level:'warn',
       text:'16 ГБ памяти будут сдерживать такую видеокарту. Для игр берите 32 ГБ.',
-      cat:'ram', pick:'32-6000' });
+      cat:'ram', pick: cheapest('ram', o => o.mem === mb.mem && o.gb >= 32) });
   }
   return out;
 }
@@ -100,7 +106,9 @@ function optionProblem(cat, o){
   if(cat === 'mb'){
     if(o.socket !== cpu.socket)                                     return 'другой сокет';
     if(!pc.forms.includes(o.form))                                  return 'не влезет в корпус';
+    if(o.mem !== chosen('ram').mem)                                 return `нужна ${o.mem}`;
   }
+  if(cat === 'ram' && o.mem !== mb.mem)                             return `плата под ${mb.mem}`;
   if(cat === 'gpu'  && o.len > pc.gpuMax)                           return 'длиннее корпуса';
   if(cat === 'cooler'){
     if(o.maxTdp < cpu.tdp)                                          return 'не потянет процессор';
