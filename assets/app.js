@@ -740,6 +740,23 @@ const io = new IntersectionObserver(entries => {
 }, { threshold: .05, rootMargin: '0px 0px -8% 0px' });   // начинаем раньше — проявление мягче
 document.querySelectorAll('.rise, .step').forEach(el => io.observe(el));
 
+/* Карточки за пределами экрана не анимируем: вентиляторы в SVG
+   вращаются на основном потоке, и полсотни невидимых пропеллеров
+   отъедали кадры наравне с видимыми. Класс снимается заранее —
+   с запасом в пол-экрана, чтобы карточка доехала до глаз уже живой. */
+const aio = new IntersectionObserver(entries => {
+  entries.forEach(en => en.target.classList.toggle('paused', !en.isIntersecting));
+}, { rootMargin: '50% 0px' });
+/* у героя вешаем класс на .hero__stage, а не на .hero__art: сценарий
+   переписывает className самого .hero__art целиком при каждой фазе
+   и стёр бы наш класс */
+/* Класс заранее не вешаем. Первый же вызов наблюдателя приходит сразу
+   и на все элементы, так что невидимые встанут без задержки. Зато если
+   наблюдатель почему-то не отработает, всё останется крутиться как
+   раньше — а не замрёт навсегда. */
+document.querySelectorAll('.card__art, .buildpg__art, .hero__stage, .offer__art')
+  .forEach(el => aio.observe(el));
+
 /* счётчики */
 const cio = new IntersectionObserver(entries => {
   entries.forEach(en => {
