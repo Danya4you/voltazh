@@ -60,15 +60,31 @@ body{
 
 /* ---------- фон, живущий по скроллу ---------- */
 .bg{position:fixed; inset:0; z-index:0; pointer-events:none}
-.bg__glow{
-  position:absolute; inset:-20%;
-  background:
-    radial-gradient(46vw 46vw at calc(18% + var(--sp)*58%) calc(14% + var(--sp)*24%),
-      rgba(255,154,31, calc(.05 + var(--sp)*.20)), transparent 62%),
-    radial-gradient(38vw 38vw at calc(88% - var(--sp)*62%) calc(78% - var(--sp)*30%),
-      rgba(143,227,255, calc(.03 + var(--sp)*.09)), transparent 60%);
+/* Два световых пятна, которые ползут по мере прокрутки.
+   Раньше и положение, и прозрачность обоих градиентов считались из
+   --sp прямо внутри background. Это значило, что на каждом кадре
+   прокрутки браузер заново растрировал два радиальных градиента
+   размером в полтора экрана и потом размывал их. Со сглаженной
+   прокруткой кадров получается втрое больше обычного, и страница
+   начинала подтормаживать именно здесь.
+   Теперь фон рисуется один раз, а по скроллу едут готовые слои:
+   transform и opacity умеет композитор, перерисовка не нужна. */
+.bg__glow{ position:absolute; inset:-35%; }
+.bg__glow::before,
+.bg__glow::after{
+  content:''; position:absolute; inset:0;
   filter:blur(6px);
-  will-change:background;
+  will-change:transform, opacity;
+}
+.bg__glow::before{
+  background:radial-gradient(46vw 46vw at 34% 26%, #FF9A1F, transparent 62%);
+  opacity:calc(.05 + var(--sp)*.20);
+  transform:translate3d(calc(var(--sp) * 43%), calc(var(--sp) * 18%), 0);
+}
+.bg__glow::after{
+  background:radial-gradient(38vw 38vw at 86% 76%, #8FE3FF, transparent 60%);
+  opacity:calc(.03 + var(--sp)*.09);
+  transform:translate3d(calc(var(--sp) * -46%), calc(var(--sp) * -22%), 0);
 }
 .bg__grid{
   position:absolute; inset:0;
@@ -195,7 +211,12 @@ a{color:inherit}
   background:rgba(18,16,14,.72); backdrop-filter:blur(14px);
   border-bottom:1px solid transparent; transition:border-color .3s, background .3s;
 }
-.top.stuck{border-bottom-color:var(--line); background:rgba(18,16,14,.92)}
+/* Прокрученная шапка залита на 92% — сквозь неё и так ничего не видно,
+   а backdrop-filter при этом заставлял браузер пересобирать и размывать
+   всё, что проезжает под ней, на каждом кадре. В каталоге под шапкой
+   едут десять тяжёлых SVG, и это било больнее всего. Наверху страницы,
+   где заливка 72%, размытие остаётся — там оно и читается. */
+.top.stuck{border-bottom-color:var(--line); background:rgba(18,16,14,.92); backdrop-filter:none}
 .top__in{display:flex; align-items:center; gap:28px; height:70px}
 .logo{display:flex; align-items:center; gap:11px; text-decoration:none; margin-right:auto}
 .logo__mark{width:30px; height:30px; flex:none}
@@ -296,6 +317,11 @@ a{color:inherit}
   to  {opacity:1; transform:none}
 }
 .fan{transform-box:fill-box; transform-origin:50% 50%; animation:spin 2.6s linear infinite}
+/* Вращение внутри SVG считается на основном потоке: каждый кадр — это
+   перерисовка всей картинки. В каталоге таких вентиляторов под полсотни,
+   и те, что за краем экрана, крутились наравне с видимыми. Снаружи их
+   останавливаем — на глаз незаметно, потому что смотреть там нечего. */
+.paused .fan, .paused .pulse{animation-play-state:paused}
 .fan--slow{animation-duration:4.4s}
 .fan--rev{animation-direction:reverse}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -470,6 +496,14 @@ input[type=range]::-moz-range-thumb{
   background:linear-gradient(180deg,var(--ground-2),var(--ground));
   border:1px solid var(--line); border-radius:var(--r-md); overflow:hidden;
   transition:border-color .3s, transform .3s, box-shadow .35s;
+  /* Каждая карточка — это SVG на полсотни узлов с градиентами и
+     вентиляторами. Десять таких браузер отрисовывал целиком, включая
+     те восемь, что за краем экрана. content-visibility разрешает
+     пропускать их до подхода к экрану; auto 520px — подсказка о высоте,
+     чтобы полоса прокрутки не прыгала, дальше браузер запоминает
+     настоящий размер сам. */
+  content-visibility:auto;
+  contain-intrinsic-size:auto 700px;
 }
 .card::after{
   content:''; position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity .35s;
@@ -477,7 +511,20 @@ input[type=range]::-moz-range-thumb{
 }
 .card:hover{transform:translateY(-5px); border-color:#4A3D2B; box-shadow:0 26px 50px -28px rgba(0,0,0,.9)}
 .card:hover::after{opacity:1}
-.card.is-out{opacity:.26; filter:saturate(.25)}
+/* Здесь стоял ещё и filter:saturate(.25). При двадцати шести процентах
+   непрозрачности он почти не читается, а стоит дорого: filter заводит
+   элементу отдельную поверхность и пересчитывается заново на каждой
+   перерисовке — то есть на каждом обороте вентиляторов внутри. Тянуть
+   ползунок бюджета по девяти таким карточкам было тяжело.
+   Раз карточка не проходит по бюджету — там и крутиться нечему. */
+/* .rise.in тоже задаёт opacity, специфичность у них одинаковая, а стоит
+   оно ниже по файлу — и выигрывало. Приглушение по бюджету не работало
+   совсем: карточки вне бюджета выглядели как обычные, менялся только
+   счётчик. Добавленный .grid делает правило весомее.
+   Длительность своя: базовые 1.05s достались от появления по скроллу,
+   для реакции на ползунок это недопустимо медленно. */
+.grid .card.is-out{opacity:.26; transition:opacity .25s}
+.card.is-out .fan, .card.is-out .pulse{animation-play-state:paused}
 .card.is-hidden{display:none}
 
 .card__tag{
@@ -792,12 +839,16 @@ input[type=range]::-moz-range-thumb{
 }
 
 /* ---------- появление по скроллу ---------- */
+/* will-change здесь стоял на базовом правиле, то есть браузер поднимал
+   в отдельный слой все тридцать блоков сразу — ещё до того, как хоть
+   один из них начал появляться. Тридцать слоёв на старте стоят дороже,
+   чем то, что will-change экономит: страница спотыкалась именно на
+   загрузке. Подъём в слой браузер сделает сам на время перехода. */
 .rise{
   opacity:0; transform:translateY(20px);
   transition:opacity 1.05s cubic-bezier(.16,.84,.28,1), transform 1.05s cubic-bezier(.16,.84,.28,1);
-  will-change:opacity, transform;
 }
-.rise.in{opacity:1; transform:none; will-change:auto}
+.rise.in{opacity:1; transform:none}
 .rise[data-d="1"]{transition-delay:.1s}
 .rise[data-d="2"]{transition-delay:.2s}
 .rise[data-d="3"]{transition-delay:.3s}

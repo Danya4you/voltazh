@@ -21,9 +21,25 @@ mkdir -p dist
 
 PAGES="index.html catalog.html configurator.html policy.html build.html checkout.html 404.html"
 
+# GitHub Pages отдаёт статику с Cache-Control: max-age=600 и своих заголовков
+# задать не даёт. Поэтому в адрес каждого ресурса подставляем отпечаток его
+# содержимого: изменился файл — изменился адрес, и браузер берёт новый,
+# не дожидаясь, пока протухнет кеш.
+stamp () {
+  echo "Отпечатки ресурсов:"
+  for a in style.css app.js data.js config.js build.js checkout.js; do
+    [ -f "assets/$a" ] || continue
+    h=$(md5sum "assets/$a" | cut -c1-8)
+    for p in $PAGES; do
+      sed -i -E "s|(assets/$a)(\?v=[a-f0-9]+)?|\1?v=$h|g" "$p"
+    done
+    printf '  %-14s %s\n' "$a" "$h"
+  done
+}
+
 inline () {
   awk '
-    /<link rel="stylesheet" href="assets\/style.css">/ {
+    /<link rel="stylesheet" href="assets\/style\.css/ {
       print "<style>"; while ((getline line < "assets/style.css") > 0) print line
       close("assets/style.css"); print "</style>"; next
     }
@@ -36,6 +52,8 @@ inline () {
   ' "$1" > "dist/$1"
   printf '  %-20s → dist/%-20s %s КБ\n' "$1" "$1" "$(( $(wc -c < "dist/$1") / 1024 ))"
 }
+
+stamp
 
 echo "Сборка однофайловых версий:"
 for p in $PAGES; do inline "$p"; done

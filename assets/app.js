@@ -14,6 +14,15 @@ const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 /* единый формат цены: неразрывные пробелы и рубль */
 const rub = n => n.toLocaleString('ru-RU') + ' ₽';
 
+/* русский счёт: 1 сборка, 2 сборки, 5 сборок (и 11-14 — тоже «сборок») */
+const plural = (n, one, few, many) => {
+  const t = n % 100, u = n % 10;
+  if(t >= 11 && t <= 14) return many;
+  if(u === 1) return one;
+  if(u >= 2 && u <= 4) return few;
+  return many;
+};
+
 /* высота прокручиваемой части документа; обновляется в measure() */
 let docH = 0;
 
@@ -170,16 +179,20 @@ function cardHTML(b, i){
   </article>`;
 }
 // на главной сетка показывает только выбранные сборки (data-only="id,id"),
-// в каталоге — все шесть
+// в каталоге — все
+let cards = [];
 if(grid){
   const only = (grid.dataset.only || '').split(',').filter(Boolean);
   const list = only.length ? only.map(id => BUILDS.find(b => b.id === id)).filter(Boolean) : BUILDS;
   grid.innerHTML = list.map(cardHTML).join('');
+  // карточки после этого не пересоздаются — фильтр только прячет и гасит,
+  // поэтому список собираем один раз, а не на каждое движение ползунка
+  cards = [...grid.querySelectorAll('.card')];
 }
 
 /* фильтры + бюджет — есть только на странице каталога */
 let activeCat = 'all';
-let maxBudget = 700000;
+let maxBudget = 350000;
 const budget = document.getElementById('budget');
 const budgetOut = document.getElementById('budgetOut');
 
@@ -197,17 +210,17 @@ function applySort(){
   if(!grid || !sortSel) return;
   const cmp = SORTS[sortSel.value];
   const order = cmp ? [...BUILDS].sort(cmp).map(b => b.id) : BUILDS.map(b => b.id);
-  grid.querySelectorAll('.card').forEach(card => {
+  cards.forEach(card => {
     card.style.order = order.indexOf(card.dataset.id);
   });
 }
 
+let lastShown = -1;
 function applyFilters(){
   if(!grid) return;
   let shown = 0;
-  grid.querySelectorAll('.card').forEach(card => {
-    const cats = card.dataset.cats.split(' ');
-    const okCat = activeCat === 'all' || cats.includes(activeCat);
+  cards.forEach(card => {
+    const okCat = activeCat === 'all' || (' ' + card.dataset.cats + ' ').includes(' ' + activeCat + ' ');
     const okPrice = +card.dataset.price <= maxBudget;
     card.classList.toggle('is-hidden', !okCat);
     card.classList.toggle('is-out', okCat && !okPrice);
@@ -222,11 +235,14 @@ function applyFilters(){
   // фильтр меняет высоту страницы, но замер откладываем: иначе чтение
   // идёт сразу после записи классов и форсирует пересчёт раскладки
   requestAnimationFrame(measure);
-  if(found){
-    const total = grid.querySelectorAll('.card').length;
-    found.innerHTML = shown === total
-      ? `Все <b>${total}</b> сборки`
-      : `Показано <b>${shown}</b> из ${total}`;
+  // строку счётчика переписываем только когда число и правда изменилось:
+  // при протяжке ползунка она одна и та же десятки кадров подряд, а
+  // присваивание innerHTML каждый раз заново разбирает разметку
+  if(found && shown !== lastShown){
+    lastShown = shown;
+    found.innerHTML = shown === cards.length
+      ? `Все <b>${cards.length}</b> ${plural(cards.length, "сборка", "сборки", "сборок")}`
+      : `Показано <b>${shown}</b> из ${cards.length}`;
   }
 }
 if(sortSel) sortSel.addEventListener('change', applySort);
@@ -238,10 +254,16 @@ document.querySelectorAll('.chip').forEach(chip => {
   });
 });
 if(budget){
+  /* Ползунок шлёт input на каждое движение мыши — до сотни раз в секунду.
+     Перебирать по ним карточки бессмысленно: показать всё равно можно
+     не чаще кадра. Копим последнее значение и разбираем раз в кадр. */
+  let pending = false;
   budget.addEventListener('input', () => {
     maxBudget = +budget.value;
-    budgetOut.textContent = maxBudget >= 700000 ? 'без лимита' : rub(maxBudget);
-    applyFilters();
+    budgetOut.textContent = maxBudget >= 350000 ? 'без лимита' : rub(maxBudget);
+    if(pending) return;
+    pending = true;
+    requestAnimationFrame(() => { pending = false; applyFilters(); });
   });
   budgetOut.textContent = 'без лимита';
 }
@@ -649,14 +671,21 @@ function measure(){
 }
 
 
+/* Деления рейки ищем один раз: querySelectorAll на каждом кадре
+   прокрутки — это обход дерева там, где список никогда не меняется. */
+const ticks = rail ? [...rail.querySelectorAll('.rail__tick')] : [];
+let lastVolt = -1;
+
 let ticking = false;
 function onScroll(){
   const p = docH > 0 ? Math.min(1, Math.max(0, scrollY / docH)) : 0;
   root.style.setProperty('--sp', p.toFixed(4));
   top.classList.toggle('stuck', scrollY > 12);
   if(rail){
-    railRead.textContent = Math.round(p * 1000) + ' V';
-    rail.querySelectorAll('.rail__tick').forEach(t => {
+    // показания меняются раз в несколько кадров — пишем только тогда
+    const volt = Math.round(p * 1000);
+    if(volt !== lastVolt){ railRead.textContent = volt + ' V'; lastVolt = volt; }
+    ticks.forEach(t => {
       t.classList.toggle('on', +t.dataset.pct / 100 <= p + .002);
     });
   }
@@ -666,6 +695,21 @@ addEventListener('scroll', () => {
   if(!ticking){ ticking = true; requestAnimationFrame(onScroll); }
 }, { passive: true });
 addEventListener("resize", () => { measure(); onScroll(); });
+/* шрифты и картинки догружаются после первого кадра и меняют высоту —
+   без этого замера прокрутка упёрлась бы в старую границу */
+addEventListener("load", () => { measure(); onScroll(); });
+/* Карточки с content-visibility до первого показа занимают
+   предсказанную высоту, а отрисовавшись — свою настоящую. Высота
+   документа при этом плывёт, и кэш в docH устаревает: прокрутка
+   упиралась бы в старую границу. Следим за сеткой и перемеряем. */
+if(grid && 'ResizeObserver' in window){
+  let pending = false;
+  new ResizeObserver(() => {
+    if(pending) return;
+    pending = true;
+    requestAnimationFrame(() => { pending = false; measure(); onScroll(); });
+  }).observe(grid);
+}
 /* первый замер — после первой отрисовки, чтобы не задерживать её */
 requestAnimationFrame(() => { measure(); onScroll(); });
 
@@ -679,10 +723,17 @@ requestAnimationFrame(() => { measure(); onScroll(); });
    ============================================================ */
 if(!RM && matchMedia('(pointer:fine)').matches){
   let target = scrollY, cur = target, raf = null, own = false;
-  const limit = () => document.documentElement.scrollHeight - innerHeight;
+  /* высоту берём из measure(), а не читаем scrollHeight на каждом
+     повороте колеса: это чтение заставляет браузер пересчитать
+     раскладку прямо посреди обработчика */
+  const limit = () => docH > 0 ? docH : document.documentElement.scrollHeight - innerHeight;
 
+  /* 0.14 давало хвост примерно в сорок кадров на один щелчок колеса —
+     страница доезжала до места почти секунду, и это читалось не как
+     плавность, а как задержка. 0.24 доводит хвост до полутора десятков
+     кадров: движение всё ещё сглажено, но идёт за рукой. */
   function glide(){
-    cur += (target - cur) * 0.14;
+    cur += (target - cur) * 0.24;
     if(Math.abs(target - cur) < 0.4){ cur = target; raf = null; }
     else raf = requestAnimationFrame(glide);
     // instant обязателен: у html стоит scroll-behavior:smooth для якорей,
@@ -713,6 +764,23 @@ const io = new IntersectionObserver(entries => {
   });
 }, { threshold: .05, rootMargin: '0px 0px -8% 0px' });   // начинаем раньше — проявление мягче
 document.querySelectorAll('.rise, .step').forEach(el => io.observe(el));
+
+/* Карточки за пределами экрана не анимируем: вентиляторы в SVG
+   вращаются на основном потоке, и полсотни невидимых пропеллеров
+   отъедали кадры наравне с видимыми. Класс снимается заранее —
+   с запасом в пол-экрана, чтобы карточка доехала до глаз уже живой. */
+const aio = new IntersectionObserver(entries => {
+  entries.forEach(en => en.target.classList.toggle('paused', !en.isIntersecting));
+}, { rootMargin: '50% 0px' });
+/* у героя вешаем класс на .hero__stage, а не на .hero__art: сценарий
+   переписывает className самого .hero__art целиком при каждой фазе
+   и стёр бы наш класс */
+/* Класс заранее не вешаем. Первый же вызов наблюдателя приходит сразу
+   и на все элементы, так что невидимые встанут без задержки. Зато если
+   наблюдатель почему-то не отработает, всё останется крутиться как
+   раньше — а не замрёт навсегда. */
+document.querySelectorAll('.card__art, .buildpg__art, .hero__stage, .offer__art')
+  .forEach(el => aio.observe(el));
 
 /* счётчики */
 const cio = new IntersectionObserver(entries => {
